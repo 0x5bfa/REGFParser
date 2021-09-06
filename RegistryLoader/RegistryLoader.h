@@ -55,10 +55,10 @@ typedef struct _BASE_BLOCK {
     GUID guidLogId;
     DWORD dwGuidFlags;
     GUID guidTmId;
-    CHAR szGuidSigneture;
+    WCHAR szGuidSigneture[5];
     FILETIME ftLastReorganizedTime;
 
-    CHAR szOffRegSigneture[5];
+    WCHAR szOffRegSigneture[5];
     DWORD dwOffRegFlags;
     FILETIME ftSerializationTime;
 

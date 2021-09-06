@@ -122,48 +122,104 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
     wprintf(L"    Clustering factor:  %d\n", pBaseBlock->dwClusteringFactor);
 
     // File name
-    for (int i = 0; i < 64; i++) pBaseBlock->szFileName[i] = pReadedData[i];
+    CHAR szTempFileName[64];
+    for (int i = 0; i < 64; i++) szTempFileName[i] = (CHAR)pReadedData[i];
     pReadedData += 64;
 
+    ByteToWchar(pBaseBlock->szFileName, szTempFileName, 64);
     wprintf(L"    File name:  %s\n", pBaseBlock->szFileName);
 
     // Resource manager guid
     ByteToGuid(pReadedData, &pBaseBlock->guidRmId);
-    wprintf(L"    ResMgr GUID:  {%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}\n"
-        , pBaseBlock->guidRmId.Data1, pBaseBlock->guidRmId.Data2, pBaseBlock->guidRmId.Data3
-        , pBaseBlock->guidRmId.Data4[0], pBaseBlock->guidRmId.Data4[1], pBaseBlock->guidRmId.Data4[2]
-        , pBaseBlock->guidRmId.Data4[3], pBaseBlock->guidRmId.Data4[4], pBaseBlock->guidRmId.Data4[5]
-        , pBaseBlock->guidRmId.Data4[6], pBaseBlock->guidRmId.Data4[7]);
+    WCHAR szRmGuidString[40] = L"";
+    GuidToWchar(szRmGuidString, &pBaseBlock->guidRmId);
+    pReadedData += 16;
+
+    wprintf(L"    RmId:  %s\n", szRmGuidString);
+
 
     // Log file guid
+    ByteToGuid(pReadedData, &pBaseBlock->guidLogId);
+    WCHAR szLogGuidString[40] = L"";
+    GuidToWchar(szLogGuidString, &pBaseBlock->guidLogId);
     pReadedData += 16;
+
+    wprintf(L"    LogId:  %s\n", szLogGuidString);
 
     // Guid flags
+    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
+    pBaseBlock->dwGuidFlags = *(DWORD*)byTemp;
     pReadedData += 4;
+
+    wprintf(L"    Guid flags:  %x\n", pBaseBlock->dwGuidFlags);
 
     // Transaction manager guid
+    ByteToGuid(pReadedData, &pBaseBlock->guidTmId);
+    WCHAR szTmGuidString[40] = L"";
+    GuidToWchar(szTmGuidString, &pBaseBlock->guidTmId);
     pReadedData += 16;
 
+    wprintf(L"    TmId:  %s\n", szTmGuidString);
+
     // Guid signeture
+    for (int i = 0; i < 4; i++) szTempSigneture[i] = pReadedData[i];
+    CharToWchar(pBaseBlock->szGuidSigneture, szTempSigneture, 5);
     pReadedData += 4;
 
+    wprintf(L"    Guid signeture:  %s\n", pBaseBlock->szGuidSigneture);
+
     // Last reorganized time
-    pReadedData += 8;
+
+    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
+    pBaseBlock->ftLastReorganizedTime.dwLowDateTime = *(DWORD*)byTemp;
+    pReadedData += 4;
+    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
+    pBaseBlock->ftLastReorganizedTime.dwHighDateTime = *(DWORD*)byTemp;
+    pReadedData += 4;
+
+    SYSTEMTIME stLastReorganizedTime = { 0 };
+    FileTimeToSystemTime(&pBaseBlock->ftLastReorganizedTime, &stLastReorganizedTime);
+    wprintf(L"    Last reorganized time: %04d/%02d/%02d  %02d:%02d\n"
+        , stLastReorganizedTime.wYear, stLastReorganizedTime.wMonth, stLastReorganizedTime.wDay
+        , stLastReorganizedTime.wHour, stLastReorganizedTime.wMinute);
 
     // Offline registry signeture
+
     pReadedData += 4;
 
     // Offline registry flags
+    pReadedData += 4;
+
+    // Reserved from (offset)184 to 184 + (size)324
+    pReadedData += 324;
+
+    // Check sum
     pReadedData += 4;
 
     // Serialization time stamp
     pReadedData += 8;
 
     // Reserved size
-    pReadedData += 3576;
-    pReadedData -= 4096;
+    pReadedData += 3520;
 
-    //wprintf(L"%c", pReadedData[0]);
+    // ThawTmId
+    pReadedData += 16;
+
+    // ThawRmId
+    pReadedData += 16;
+
+    // ThawLogId
+    pReadedData += 16;
+
+    // Boot type
+    pReadedData += 4;
+
+    // Boot recover
+    pReadedData += 4;
+
+    // Rewind
+    // pReadedData -= 4096;
+
     return SUCCESS;
 }
 
@@ -203,6 +259,34 @@ BOOL CharToWchar(WCHAR* szWideString, CHAR* szSingleString, DWORD dwSizeToCopy) 
 
         szWideString[i] = (WCHAR)szSingleString[i];
     }
+
+    return SUCCESS;
+}
+
+BOOL ByteToWchar(WCHAR* szWideString, BYTE* pData, DWORD dwSizeToCopy) {
+
+    if (szWideString == NULL || pData == NULL || dwSizeToCopy == 0) return FAILURE;
+
+    for (int i = 0, j = 0; i < dwSizeToCopy * 2; i++, j++) {
+
+        if (i % 2 == 1) {
+            j--;
+            continue;
+        }
+
+        szWideString[j] = pData[i];
+    }
+
+    return SUCCESS;
+}
+
+BOOL GuidToWchar(WCHAR* szWideString, GUID* Guid) {
+
+    if (szWideString == NULL || Guid == NULL) return FAILURE;
+
+    swprintf(szWideString, 40, L"{%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}"
+        , Guid->Data1, Guid->Data2, Guid->Data3, Guid->Data4[0], Guid->Data4[1], Guid->Data4[2]
+        , Guid->Data4[3], Guid->Data4[4], Guid->Data4[5], Guid->Data4[6], Guid->Data4[7]);
 
     return SUCCESS;
 }
