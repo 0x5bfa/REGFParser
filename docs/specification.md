@@ -31,18 +31,18 @@ Offset|Size|Desc
 24|4|**DWORD**<br>[Minor version](#21-format-versions)<br>Minor version of a hive writer.
 28|4|**DWORD**<br>[File type](#22-file-types)
 32|4|**DWORD**<br>[File format](#23-file-format)
-36|4|**DWORD**<br>Root cell offset<br>Offset of a root cell in bytes, relative from the start of the hive bins data.
+36|4|**DWORD**<br>[Root cell offset](#24-root-cell-offset)<br>Offset of a root cell in bytes, relative from the start of the hive bins data.
 40|4|**DWORD**<br>Hive bins data size<br>Size of the hive bins data in bytes.
 44|4|**DWORD**<br>Clustering factor<br>Logical sector size of the underlying disk in bytes divided by 512.
 48|64|**ASCII String**<br>File name<br>UTF-16LE string (contains a partial file path to the primary file, or a file name of the primary file), used for debugging purposes.
 112|16|**GUID**<br>RmId<br>A GUID of the Resource Manager (RM).<br>(Windows 10 only)
 128|16|**GUID**<br>LogId<br>A GUID used to generate a file name of a log file stream for the Transaction Manager (TM).<br>(Windows 10 only)
-144|4|Flags<br>[Bit mask](#24-bit-mask-for-flags)<br>(Windows 10 only)
+144|4|**DWORD**<br>[Flags](#25-bit-mask-for-flags)<br>(Windows 10 only)
 148|16|**GUID**<br>TmId<br>A GUID used to generate a file name of a physical log file.<br>(Windows 10 only)
-164|4|**ASCII String**<br>GUID signature<br>Aloways "rmtm".<br>(Windows 10 only)
+164|4|**ASCII String**<br>GUID signature<br>Always "rmtm".<br>(Windows 10 only)
 168|8|**FILETIME**<br>Last reorganized timestamp<br>(Windows 10 only)
 176|4|**ASCII String**<br>Offline registry signeture<br>Always "OfRg".<br>(written by offline registry library)
-180|4|**DWORD**<br>Flags<br>Always 1<br>written by offline registry library)
+180|4|**DWORD**<br>Flags<br>Always 1.<br>written by offline registry library)
 184|324|Reserved
 508|4|**DWORD**<br>Checksum<br>XOR-32 checksum of the previous 508 bytes.
 512|8|**FILETIME**<br>Serialization timestamp (UTC).<br>(written by offline registry library)
@@ -80,10 +80,16 @@ Value|Desc
 ---|---
 1|Direct memory load
 
-### 2.4 Bit mask for Flags
+### 2.4 Root cell offset
+
+`File offset of a root cell = 4096 + Root cell offset.`
+
+This formula also applies to any other offset relative from the start of the hive bins data (however, if such a relative offset is equal to `0xFFFFFFFF`, it doesn't point anywhere).
+
+### 2.5 Bit mask for Flags
 
 Mask|Description
 ---|---
-0x00000001|KTM locked the hive (there are pending or anticipated transactions)
-0x00000002|The hive has been defragmented (all its pages are dirty therefore) and it is being written to a disk (Windows 8 and Windows Server 2012 only, this flag is used to speed up hive recovery by reading a transaction log file instead of a primary file); this hive supports the layered keys feature (starting from Insider Preview builds of Windows 10 "Redstone 1")
+0x1|KTM locked the hive (there are pending or anticipated transactions)
+0x2|The hive has been defragmented (all its pages are dirty therefore) and it is being written to a disk (Windows 8 and Windows Server 2012 only, this flag is used to speed up hive recovery by reading a transaction log file instead of a primary file); this hive supports the layered keys feature (starting from Insider Preview builds of Windows 10 "Redstone 1")
 
