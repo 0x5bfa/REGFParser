@@ -6,16 +6,16 @@
 int wmain(void) {
 
     BASE_BLOCK BaseBlock = { 0 };
+    HBIN HBin = { 0 };
 
     HANDLE hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD_Backup", GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
     ParseFileHeader(&BaseBlock, hFile);
 
+    ParseHiveBinsData(&HBin, hFile);
+
     return SUCCESS;
 }
-
-
-
 
 
 BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
@@ -223,6 +223,14 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
     return SUCCESS;
 }
 
+
+BOOL ParseHiveBinsData(PHBIN pHBin, HANDLE hFile) {
+
+
+    return SUCCESS;
+}
+
+
 BOOL ByteToGuid(PBYTE pData, GUID* guidResultGuid) {
 
     if (pData == NULL || guidResultGuid == NULL) return FAILURE;
@@ -251,6 +259,7 @@ BOOL ByteToGuid(PBYTE pData, GUID* guidResultGuid) {
     return SUCCESS;
 }
 
+
 BOOL CharToWchar(WCHAR* szWideString, CHAR* szSingleString, DWORD dwSizeToCopy) {
 
     if (szWideString == NULL || szSingleString == NULL || dwSizeToCopy == 0) return FAILURE;
@@ -262,6 +271,7 @@ BOOL CharToWchar(WCHAR* szWideString, CHAR* szSingleString, DWORD dwSizeToCopy) 
 
     return SUCCESS;
 }
+
 
 BOOL ByteToWchar(WCHAR* szWideString, BYTE* pData, DWORD dwSizeToCopy) {
 
@@ -279,6 +289,7 @@ BOOL ByteToWchar(WCHAR* szWideString, BYTE* pData, DWORD dwSizeToCopy) {
 
     return SUCCESS;
 }
+
 
 BOOL GuidToWchar(WCHAR* szWideString, GUID* Guid) {
 
