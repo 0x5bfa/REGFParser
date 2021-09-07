@@ -7,12 +7,20 @@ int wmain(void) {
 
     BASE_BLOCK BaseBlock = { 0 };
     HBIN HBin = { 0 };
+    CELL Cell = { 0 };
+    DWORD dwResult = 0;
 
     HANDLE hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD_Backup", GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
     ParseFileHeader(&BaseBlock, hFile);
 
     ParseHiveBinHeader(&HBin, hFile);
+
+    do {
+
+        ParseCell(&Cell, hFile);
+
+    } while (dwResult == SUCCESS);
 
     return SUCCESS;
 }
@@ -233,14 +241,12 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
     SetFilePointer(hFile, 4096, NULL, FILE_BEGIN);
 
     // Hive bin header size is 32
-    BYTE byReadData[4096] = { 0 };
+    BYTE byReadData[32] = { 0 };
     PBYTE pReadedData = NULL;
-    DWORD nBaseBlockSize = 4096;
+    DWORD nBaseBlockSize = 32;
     DWORD nReadedSize = 0;
 
     BYTE byTemp[8] = { 0 };
-    FILETIME ftBaseBlockTimeStamp;
-    SYSTEMTIME stBaseBlockTimeStamp;
     CHAR szTempSigneture[5] = "";
 
     // read file until 4096 bytes
@@ -268,6 +274,64 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
 
     wprintf(L"    Relative offset:  %d", pHBin->dwRelativeOffset);
 
+    // Size
+    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
+    pHBin->dwSize = *(DWORD*)byTemp;
+    pReadedData += 4;
+
+    wprintf(L"    Size:  %d", pHBin->dwSize);
+
+    // Reserved
+    pReadedData += 8;
+
+    // Time stamp
+    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
+    pHBin->TimeStamp.dwLowDateTime = *(DWORD*)byTemp;
+    pReadedData += 4;
+    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
+    pHBin->TimeStamp.dwHighDateTime = *(DWORD*)byTemp;
+    pReadedData += 4;
+
+    SYSTEMTIME stTimeStamp;
+    FileTimeToSystemTime(&pHBin->TimeStamp, &stTimeStamp);
+    wprintf(L"    Time stamp: %04d/%02d/%02d  %02d:%02d\n"
+        , stTimeStamp.wYear, stTimeStamp.wMonth, stTimeStamp.wDay
+        , stTimeStamp.wHour, stTimeStamp.wMinute);
+
+    // Spara (or MemAlloc)
+    pReadedData += 4;
+
+    return SUCCESS;
+}
+
+
+BOOL ParseCell(PCELL pCell, HANDLE hFile) {
+
+    // Move 4096 bytes
+    SetFilePointer(hFile, 32, NULL, FILE_BEGIN);
+
+    // Hive bin header size is 32
+    BYTE byReadData[4] = { 0 };
+    PBYTE pReadedData = NULL;
+    DWORD nBaseBlockSize = 4;
+    DWORD nReadedSize = 0;
+
+    BYTE byTemp[8] = { 0 };
+    CHAR szTempSigneture[5] = "";
+
+    // read file until 4096 bytes
+    if (ReadFile(hFile, &byReadData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
+
+        wprintf(L"ReadFile failed with %d", GetLastError());
+        return FAILURE;
+    }
+
+    pReadedData = byReadData;
+
+    wprintf(L" First Cell:\n");
+
+    // temporary return
+    return FAILURE;
 
     return SUCCESS;
 }

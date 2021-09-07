@@ -45,5 +45,16 @@ typedef struct _HBIN {
 
     WCHAR szHBinSigneture[5];
     DWORD dwRelativeOffset;
+    DWORD dwSize;
+    FILETIME TimeStamp;
 
 }HBIN, *PHBIN;
+
+
+typedef struct _CELL {
+
+    DWORD dwSize; // (Nebative: Assigned, Positive: Not assigned)
+    WCHAR szHBinSigneture[3];
+
+
+}CELL, *PCELL;
