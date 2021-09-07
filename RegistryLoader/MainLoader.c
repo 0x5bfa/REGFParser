@@ -12,7 +12,7 @@ int wmain(void) {
 
     ParseFileHeader(&BaseBlock, hFile);
 
-    ParseHiveBinsData(&HBin, hFile);
+    ParseHiveBinHeader(&HBin, hFile);
 
     return SUCCESS;
 }
@@ -24,13 +24,14 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
     BYTE byReadData[4096] = { 0 };
     PBYTE pReadedData = NULL;
     DWORD nBaseBlockSize = 4096;
+    DWORD nReadedSize = 0;
+
     BYTE byTemp[8] = { 0 };
     FILETIME ftBaseBlockTimeStamp;
     SYSTEMTIME stBaseBlockTimeStamp;
     CHAR szTempSigneture[5] = "";
 
     // read file until 4096 bytes
-    DWORD nReadedSize = 0;
     if (ReadFile(hFile, &byReadData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
 
         wprintf(L"ReadFile failed with %d", GetLastError());
@@ -220,11 +221,52 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
     // Rewind
     // pReadedData -= 4096;
 
+    wprintf(L"\n");
+
     return SUCCESS;
 }
 
 
-BOOL ParseHiveBinsData(PHBIN pHBin, HANDLE hFile) {
+BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
+
+    // Move 4096 bytes
+    SetFilePointer(hFile, 4096, NULL, FILE_BEGIN);
+
+    // Hive bin header size is 32
+    BYTE byReadData[4096] = { 0 };
+    PBYTE pReadedData = NULL;
+    DWORD nBaseBlockSize = 4096;
+    DWORD nReadedSize = 0;
+
+    BYTE byTemp[8] = { 0 };
+    FILETIME ftBaseBlockTimeStamp;
+    SYSTEMTIME stBaseBlockTimeStamp;
+    CHAR szTempSigneture[5] = "";
+
+    // read file until 4096 bytes
+    if (ReadFile(hFile, &byReadData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
+
+        wprintf(L"ReadFile failed with %d", GetLastError());
+        return FAILURE;
+    }
+
+    pReadedData = byReadData;
+
+    wprintf(L"Hive bin Header:\n");
+
+    // Regf signeture
+    for (int i = 0; i < 4; i++) szTempSigneture[i] = pReadedData[i];
+    CharToWchar(pHBin->szHBinSigneture, szTempSigneture, 5);
+    pReadedData += 4;
+
+    wprintf(L"    Signeture:  %s\n", pHBin->szHBinSigneture);
+
+    // Relative offset
+    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
+    pHBin->dwRelativeOffset = *(DWORD*)byTemp;
+    pReadedData += 4;
+
+    wprintf(L"    Relative offset:  %d", pHBin->dwRelativeOffset);
 
 
     return SUCCESS;

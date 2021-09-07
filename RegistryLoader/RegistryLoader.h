@@ -44,5 +44,6 @@ typedef struct _BASE_BLOCK {
 typedef struct _HBIN {
 
     WCHAR szHBinSigneture[5];
+    DWORD dwRelativeOffset;
 
 }HBIN, *PHBIN;
