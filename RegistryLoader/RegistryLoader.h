@@ -54,7 +54,7 @@ typedef struct _HBIN {
 typedef struct _CELL {
 
     DWORD dwSize; // (Nebative: Assigned, Positive: Not assigned)
-    WCHAR szHBinSigneture[3];
+    WCHAR szCellSigneture[3];
 
 
 }CELL, *PCELL;

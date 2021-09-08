@@ -272,14 +272,14 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
     pHBin->dwRelativeOffset = *(DWORD*)byTemp;
     pReadedData += 4;
 
-    wprintf(L"    Relative offset:  %d", pHBin->dwRelativeOffset);
+    wprintf(L"    Relative offset:  %d\n", pHBin->dwRelativeOffset);
 
     // Size
     for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
     pHBin->dwSize = *(DWORD*)byTemp;
     pReadedData += 4;
 
-    wprintf(L"    Size:  %d", pHBin->dwSize);
+    wprintf(L"    Size:  %d\n", pHBin->dwSize);
 
     // Reserved
     pReadedData += 8;
@@ -301,19 +301,21 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
     // Spara (or MemAlloc)
     pReadedData += 4;
 
+    wprintf(L"\n");
+
     return SUCCESS;
 }
 
 
 BOOL ParseCell(PCELL pCell, HANDLE hFile) {
 
-    // Move 4096 bytes
-    SetFilePointer(hFile, 32, NULL, FILE_BEGIN);
+    // Move 32 bytes
+    SetFilePointer(hFile, 4096 + 32, NULL, FILE_BEGIN);
 
-    // Hive bin header size is 32
-    BYTE byReadData[4] = { 0 };
+    // Cell size offset size is 4
+    BYTE byReadData[32] = { 0 };
     PBYTE pReadedData = NULL;
-    DWORD nBaseBlockSize = 4;
+    DWORD nBaseBlockSize = 32;
     DWORD nReadedSize = 0;
 
     BYTE byTemp[8] = { 0 };
@@ -329,6 +331,23 @@ BOOL ParseCell(PCELL pCell, HANDLE hFile) {
     pReadedData = byReadData;
 
     wprintf(L" First Cell:\n");
+
+    // Cell size
+    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
+    pCell->dwSize = *(DWORD*)byTemp;
+    pReadedData += 4;
+
+    wprintf(L"    Size:  %d\n", pCell->dwSize);
+
+    // Cell signeture
+    for (int i = 0; i < 2; i++) szTempSigneture[i] = pReadedData[i];
+    CharToWchar(pCell->szCellSigneture, szTempSigneture, 3);
+    pReadedData += 2;
+
+    wprintf(L"    Signeture:  %s\n", pCell->szCellSigneture);
+
+
+
 
     // temporary return
     return FAILURE;
