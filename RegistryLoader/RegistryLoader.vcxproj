@@ -139,7 +139,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Converter.c" />
     <ClCompile Include="MainLoader.c" />
+    <ClCompile Include="CellDataParser.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RegistryLoader.h" />

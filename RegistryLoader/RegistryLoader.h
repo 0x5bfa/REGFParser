@@ -58,3 +58,10 @@ typedef struct _CELL {
 
 
 }CELL, *PCELL;
+
+// functions
+
+BOOL ByteToGuid(PBYTE pData, GUID* guidResultGuid);
+BOOL CharToWchar(WCHAR* szWideString, CHAR* szSingleString, DWORD dwSizeToCopy);
+BOOL ByteToWchar(WCHAR* szWideString, BYTE* pData, DWORD dwSizeToCopy);
+BOOL GuidToWchar(WCHAR* szWideString, GUID* Guid);
