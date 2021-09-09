@@ -139,30 +139,30 @@ When a record (entity) contains an offset field pointing to another record (enti
 
 Offset|Length|Description
 ---|---|---
-0|2|ASCII string
-2|2|Number of elements
-4|...|List elements
+0|2|**ASCII String**<br>Signeture<br>Always "li".
+2|2|**UINT**<br>Number of elements
+4|...|**UINT**<br>List elements
 
 A list element has the following structure (a list element is repeated Number of elements times):
 
 Offset|Length|Description
 ---|---|---
-0|4|In bytes, relative from the start of the hive bins data
+0|4|**UINT**<br>In bytes, relative from the start of the hive bins data
 
 ### 3.2. Fast Leaf
 
 Offset|Length|Description
 ---|---|---
-0|2|ASCII string
-2|2|Number of elements
-4|...|List elements
+0|2|**ASCII String**<br>Signeture<br>Always "lf".
+2|2|**UINT**<br>Number of elements
+4|...|**UINT**<br>List elements
 
 A list element has the following structure:
 
 Offset|Length|Description
 ---|---|---
-0|4|In bytes, relative from the start of the hive bins data
-4|4|The first 4 ASCII characters of a key name string (used to speed up lookups)
+0|4|**UINT**<br>In bytes, relative from the start of the hive bins data
+4|4|**ASCII String**<br>The first 4 ASCII characters of a key name string (used to speed up lookups)
 
 If a key name string is less than 4 characters in length, it is stored in the beginning of the Name hint field (hereinafter, the beginning of the field means the byte at the lowest address or the first few bytes at lower addresses in the field), unused bytes of this field are set to null. UTF-16LE characters are converted to ASCII (extended), if possible (if it isn't, the first byte of the Name hint field is null).
 
