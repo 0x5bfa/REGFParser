@@ -7,7 +7,6 @@ int wmain(void) {
 
     BASE_BLOCK BaseBlock = { 0 };
     HBIN HBin = { 0 };
-    CELL Cell = { 0 };
     DWORD dwResult = 0;
 
     HANDLE hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD_Backup", GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
@@ -18,7 +17,7 @@ int wmain(void) {
 
     do {
 
-        ParseCell(&Cell, hFile);
+        ParseCell(hFile);
 
     } while (dwResult == SUCCESS);
 
@@ -34,9 +33,9 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
     DWORD nBaseBlockSize = 4096;
     DWORD nReadedSize = 0;
 
-    BYTE byTemp[8] = { 0 };
-    FILETIME ftBaseBlockTimeStamp;
-    SYSTEMTIME stBaseBlockTimeStamp;
+    BYTE byDwordArray[4] = { 0 };
+    FILETIME ftBaseBlockTimeStamp = { 0 };
+    SYSTEMTIME stBaseBlockTimeStamp = { 0 };
     CHAR szTempSigneture[5] = "";
 
     // read file until 4096 bytes
@@ -58,23 +57,23 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
     wprintf(L"    Signeture:  %s\n", pBaseBlock->szRegfSigneture);
 
     // Primary sequence number
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pBaseBlock->dwPrimarySequenceNumber = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pBaseBlock->dwPrimarySequenceNumber = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     // Secondary sequence number
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pBaseBlock->dwSecondarySequenceNumber = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pBaseBlock->dwSecondarySequenceNumber = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     wprintf(L"    SequenceNo. { %d, %d }\n", pBaseBlock->dwPrimarySequenceNumber, pBaseBlock->dwSecondarySequenceNumber);
 
     // Last written timestamp
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pBaseBlock->ftLastWrittenTimeStamp.dwLowDateTime = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pBaseBlock->ftLastWrittenTimeStamp.dwLowDateTime = *(DWORD*)byDwordArray;
     pReadedData += 4;
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pBaseBlock->ftLastWrittenTimeStamp.dwHighDateTime = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pBaseBlock->ftLastWrittenTimeStamp.dwHighDateTime = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     SYSTEMTIME stLastWrittenTimeStamp = { 0 };
@@ -84,48 +83,48 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
         , stLastWrittenTimeStamp.wHour, stLastWrittenTimeStamp.wMinute);
 
     // Major version
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pBaseBlock->dwWriterMajorVersion = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pBaseBlock->dwWriterMajorVersion = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     // Minor version
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pBaseBlock->dwWriterMinorVersion = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pBaseBlock->dwWriterMinorVersion = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     wprintf(L"    Maj.Min  %d.%d\n", pBaseBlock->dwWriterMajorVersion, pBaseBlock->dwWriterMinorVersion);
 
     // File type
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pBaseBlock->dwFileType = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pBaseBlock->dwFileType = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     wprintf(L"    File type:  %d\n", pBaseBlock->dwFileType);
 
     // File format
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pBaseBlock->dwFileFormat = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pBaseBlock->dwFileFormat = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     wprintf(L"    File format:  %d\n", pBaseBlock->dwFileFormat);
 
     // Root cell offset
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pBaseBlock->dwRootCellOffset = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pBaseBlock->dwRootCellOffset = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     wprintf(L"    Root cell offset:  %d\n", pBaseBlock->dwRootCellOffset);
 
     // Hive bins data size
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pBaseBlock->dwHiveBinsDataSize = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pBaseBlock->dwHiveBinsDataSize = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     wprintf(L"    Hive bins data:  %d\n", pBaseBlock->dwHiveBinsDataSize);
 
     // Clustering factor
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pBaseBlock->dwClusteringFactor = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pBaseBlock->dwClusteringFactor = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     wprintf(L"    Clustering factor:  %d\n", pBaseBlock->dwClusteringFactor);
@@ -156,8 +155,8 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
     wprintf(L"    LogId:  %s\n", szLogGuidString);
 
     // Guid flags
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pBaseBlock->dwGuidFlags = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pBaseBlock->dwGuidFlags = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     wprintf(L"    Guid flags:  %x\n", pBaseBlock->dwGuidFlags);
@@ -179,11 +178,11 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
 
     // Last reorganized time
 
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pBaseBlock->ftLastReorganizedTime.dwLowDateTime = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pBaseBlock->ftLastReorganizedTime.dwLowDateTime = *(DWORD*)byDwordArray;
     pReadedData += 4;
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pBaseBlock->ftLastReorganizedTime.dwHighDateTime = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pBaseBlock->ftLastReorganizedTime.dwHighDateTime = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     SYSTEMTIME stLastReorganizedTime = { 0 };
@@ -246,7 +245,7 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
     DWORD nBaseBlockSize = 32;
     DWORD nReadedSize = 0;
 
-    BYTE byTemp[8] = { 0 };
+    BYTE byDwordArray[4] = { 0 };
     CHAR szTempSigneture[5] = "";
 
     // read file until 4096 bytes
@@ -268,15 +267,15 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
     wprintf(L"    Signeture:  %s\n", pHBin->szHBinSigneture);
 
     // Relative offset
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pHBin->dwRelativeOffset = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pHBin->dwRelativeOffset = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     wprintf(L"    Relative offset:  %d\n", pHBin->dwRelativeOffset);
 
     // Size
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pHBin->dwSize = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pHBin->dwSize = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     wprintf(L"    Size:  %d\n", pHBin->dwSize);
@@ -285,11 +284,11 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
     pReadedData += 8;
 
     // Time stamp
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pHBin->TimeStamp.dwLowDateTime = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pHBin->TimeStamp.dwLowDateTime = *(DWORD*)byDwordArray;
     pReadedData += 4;
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pHBin->TimeStamp.dwHighDateTime = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pHBin->TimeStamp.dwHighDateTime = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
     SYSTEMTIME stTimeStamp;
@@ -310,58 +309,49 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
 }
 
 
-BOOL ParseCell(PCELL pCell, HANDLE hFile) {
+BOOL ParseCell(HANDLE hFile) {
 
-    // Cell size offset size is 4
-    BYTE byReadData[4] = { 0 };
+    BYTE byReadData[6] = { 0 };
     PBYTE pReadedData = NULL;
-    DWORD nBaseBlockSize = 4;
+    DWORD nBaseBlockSize = 6;
     DWORD nReadedSize = 0;
 
-    BYTE byTemp[8] = { 0 };
-    CHAR szTempSigneture[5] = "";
+    BYTE dwDwordArray[4] = { 0 };
+    CHAR szTempSigneture[3] = "";
 
-    // read file until 4 bytes
+    // read 6 bytes
     if (ReadFile(hFile, &byReadData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
 
         wprintf(L"ReadFile failed with %d", GetLastError());
         return FAILURE;
     }
 
-
     pReadedData = byReadData;
 
-    wprintf(L" Cell:\n");
+    wprintf(L"Cell:\n");
+
+    WCHAR szCellSigneture[3] = L"";
+    DWORD dwSize = 0;
 
     // Cell size
-    for (int i = 0; i < 4; i++) byTemp[i] = pReadedData[i];
-    pCell->dwSize = *(DWORD*)byTemp;
+    for (int i = 0; i < 4; i++) dwDwordArray[i] = pReadedData[i];
+    dwSize = abs(*(DWORD*)dwDwordArray);
     pReadedData += 4;
 
-    wprintf(L"    Size:  %d\n", abs(pCell->dwSize));
-
-    //if (pCell->dwSize > 0) return FAILURE;
-
-    if ((pReadedData = (BYTE*)calloc(abs(pCell->dwSize), sizeof(BYTE))) == NULL) return 0;
-    nBaseBlockSize = abs(pCell->dwSize);
-
-    // read file
-    if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
-
-        wprintf(L"ReadFile failed with %d", GetLastError());
-        return FAILURE;
-    }
-
+    wprintf(L"    Size:  %d\n", dwSize);
 
     // Cell signeture
     for (int i = 0; i < 2; i++) szTempSigneture[i] = pReadedData[i];
-    CharToWchar(pCell->szCellSigneture, szTempSigneture, 3);
+    CharToWchar(szCellSigneture, szTempSigneture, 3);
     pReadedData += 2;
 
-    wprintf(L"    Signeture:  %s\n", pCell->szCellSigneture);
+    wprintf(L"    Signeture:  %s\n", szCellSigneture);
 
+    if (!wcscmp(szCellSigneture, L"nk")) {
 
-
+        NODE_KEY NodeKey = { 0 };
+        ParseKeyNodeCell(&NodeKey, hFile, dwSize);
+    }
 
     // temporary return
     return FAILURE;
