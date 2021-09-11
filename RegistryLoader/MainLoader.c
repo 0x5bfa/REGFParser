@@ -3,23 +3,42 @@
 
 #include "RegistryLoader.h"
 
+
+BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile);
+BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile);
+DWORD ParseCell(HANDLE hFile, LPDWORD pCellSize);
+
+
 int wmain(void) {
 
     BASE_BLOCK BaseBlock = { 0 };
     HBIN HBin = { 0 };
-    DWORD dwResult = 0;
+    KEY_NODE KeyNode = { 0 };
 
-    HANDLE hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD_Backup", GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    DWORD dwResult = SUCCESS;
+
+    HANDLE hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD_Backup", GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
     ParseFileHeader(&BaseBlock, hFile);
 
     ParseHiveBinHeader(&HBin, hFile);
 
-    do {
+    DWORD dwCellType = 0;
+    DWORD dwCellSize = 0;
 
-        ParseCell(hFile);
+    while (dwResult != FAILURE) {
 
-    } while (dwResult == SUCCESS);
+        dwResult = dwCellType = ParseCell(hFile, &dwCellSize);
+
+        switch (dwCellType) {
+
+        case CELL_KEY_NODE:
+
+            ParseKeyNodeCell(&KeyNode, hFile, dwCellSize);
+        }
+
+        break; // temp
+    }
 
     return SUCCESS;
 }
@@ -78,7 +97,7 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
 
     SYSTEMTIME stLastWrittenTimeStamp = { 0 };
     FileTimeToSystemTime(&pBaseBlock->ftLastWrittenTimeStamp, &stLastWrittenTimeStamp);
-    wprintf(L"    Last written time: %04d/%02d/%02d  %02d:%02d\n"
+    wprintf(L"    Last written time: %04d/%02d/%02d %02d:%02d\n"
         , stLastWrittenTimeStamp.wYear, stLastWrittenTimeStamp.wMonth, stLastWrittenTimeStamp.wDay
         , stLastWrittenTimeStamp.wHour, stLastWrittenTimeStamp.wMinute);
 
@@ -187,7 +206,7 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
 
     SYSTEMTIME stLastReorganizedTime = { 0 };
     FileTimeToSystemTime(&pBaseBlock->ftLastReorganizedTime, &stLastReorganizedTime);
-    wprintf(L"    Last reorganized time: %04d/%02d/%02d  %02d:%02d\n"
+    wprintf(L"    Last reorganized time: %04d/%02d/%02d %02d:%02d\n"
         , stLastReorganizedTime.wYear, stLastReorganizedTime.wMonth, stLastReorganizedTime.wDay
         , stLastReorganizedTime.wHour, stLastReorganizedTime.wMinute);
 
@@ -293,7 +312,7 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
 
     SYSTEMTIME stTimeStamp;
     FileTimeToSystemTime(&pHBin->TimeStamp, &stTimeStamp);
-    wprintf(L"    Time stamp: %04d/%02d/%02d  %02d:%02d\n"
+    wprintf(L"    Time stamp: %04d/%02d/%02d %02d:%02d\n"
         , stTimeStamp.wYear, stTimeStamp.wMonth, stTimeStamp.wDay
         , stTimeStamp.wHour, stTimeStamp.wMinute);
 
@@ -309,7 +328,7 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
 }
 
 
-BOOL ParseCell(HANDLE hFile) {
+DWORD ParseCell(HANDLE hFile, LPDWORD pCellSize) {
 
     BYTE byReadData[6] = { 0 };
     PBYTE pReadedData = NULL;
@@ -336,6 +355,7 @@ BOOL ParseCell(HANDLE hFile) {
     // Cell size
     for (int i = 0; i < 4; i++) dwDwordArray[i] = pReadedData[i];
     dwSize = abs(*(DWORD*)dwDwordArray);
+    *pCellSize = dwSize;
     pReadedData += 4;
 
     wprintf(L"    Size:  %d\n", dwSize);
@@ -347,10 +367,9 @@ BOOL ParseCell(HANDLE hFile) {
 
     wprintf(L"    Signeture:  %s\n", szCellSigneture);
 
-    if (!wcscmp(szCellSigneture, L"nk")) {
+    if (CHECK_RETURN(wcscmp(szCellSigneture, L"nk"))) {
 
-        NODE_KEY NodeKey = { 0 };
-        ParseKeyNodeCell(&NodeKey, hFile, dwSize);
+        return CELL_KEY_NODE;
     }
 
     // temporary return

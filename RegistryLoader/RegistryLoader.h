@@ -11,7 +11,7 @@
 
 #define SUCCESS 1
 #define FAILURE 0
-#define CHECK_RETURN ((x) == 0)
+#define CHECK_RETURN(x) ((x) == 0)
 
 #define CELL_INDEX_LEAF   0x002
 #define CELL_FAST_LEAF    0x004
@@ -60,10 +60,10 @@ typedef struct _HBIN {
 }HBIN, *PHBIN;
 
 
-typedef struct {
+typedef struct _KEY_NODE {
 
     DWORD dwSize;
-    WCHAR szSigneture[3];
+    WCHAR szKeyNodeSigneture[3];
     DWORD dwFlags;
     FILETIME ftLastWrittenTime;
     DWORD dwAccessBits;
@@ -73,14 +73,14 @@ typedef struct {
     DWORD dwSubKeysListOffset;
     DWORD nKeyValues;
     DWORD dwKeyValuesListOffset;
-    DWORD KeySecurityOffset;
+    DWORD dwKeySecurityOffset;
     DWORD dwClassNameOffset;
-    DWORD LargestSubKeyNameLength;
-    DWORD LargestSubKeyClassLength;
-    DWORD LargestValueNameLength;
-    DWORD LargestValueDataSize;
-    DWORD WorkVar;
-    DWORD KeyNameLength;
+    DWORD dwLargestSubKeyNameLength;
+    DWORD dwLargestSubKeyClassLength;
+    DWORD dwLargestValueNameLength;
+    DWORD dwLargestValueDataSize;
+    DWORD dwWorkVar;
+    DWORD dwKeyNameLength;
     DWORD dwClassNameLength;
     DWORD dwKeyNameString;
 
@@ -89,7 +89,7 @@ typedef struct {
 
 
 
-}NODE_KEY, * PNODE_KEY;
+}KEY_NODE, *PKEY_NODE;
 
 
 
@@ -100,4 +100,4 @@ BOOL CharToWchar(WCHAR* szWideString, CHAR* szSingleString, DWORD dwSizeToCopy);
 BOOL ByteToWchar(WCHAR* szWideString, BYTE* pData, DWORD dwSizeToCopy);
 BOOL GuidToWchar(WCHAR* szWideString, GUID* Guid);
 
-BOOL ParseKeyNodeCell(PNODE_KEY pNodeKey, HANDLE hFile, DWORD dwCellSize);
+BOOL ParseKeyNodeCell(PKEY_NODE pKeyNode, HANDLE hFile, DWORD dwCellSize);
