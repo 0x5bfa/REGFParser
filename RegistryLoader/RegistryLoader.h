@@ -22,6 +22,9 @@
 #define CELL_KEY_SECURITY 0x080
 #define CELL_BIG_DATA     0x100
 
+extern DWORD dwAbsoluteOffsetCurrentPointer;
+
+
 typedef struct _BASE_BLOCK {
 
     WCHAR szRegfSigneture[5];
@@ -48,7 +51,8 @@ typedef struct _BASE_BLOCK {
     DWORD dwOffRegFlags;
     FILETIME ftSerializationTime;
 
-}BASE_BLOCK, * PBASE_BLOCK;
+}BASE_BLOCK, *PBASE_BLOCK;
+
 
 typedef struct _HBIN {
 
@@ -92,6 +96,18 @@ typedef struct _KEY_NODE {
 }KEY_NODE, *PKEY_NODE;
 
 
+typedef struct _SECURITY_KEY {
+
+    DWORD dwSize;
+    WCHAR szKeyNodeSigneture[3];
+    DWORD dwFlink;
+    DWORD dwBlink;
+    DWORD dwReferenceCount;
+    DWORD dwSecurityDescriptorSize;
+
+
+}SECURITY_KEY, *PSECURITY_KEY;
+
 
 // functions
 
@@ -101,3 +117,4 @@ BOOL ByteToWchar(WCHAR* szWideString, BYTE* pData, DWORD dwSizeToCopy);
 BOOL GuidToWchar(WCHAR* szWideString, GUID* Guid);
 
 BOOL ParseKeyNodeCell(PKEY_NODE pKeyNode, HANDLE hFile, DWORD dwCellSize);
+BOOL ParseSecurityKey(PSECURITY_KEY pSecurityKey, HANDLE hFile, DWORD dwCellSize);

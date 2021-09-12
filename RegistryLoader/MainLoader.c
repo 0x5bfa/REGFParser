@@ -3,6 +3,7 @@
 
 #include "RegistryLoader.h"
 
+DWORD dwAbsoluteOffsetCurrentPointer = 0;
 
 BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile);
 BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile);
@@ -14,10 +15,11 @@ int wmain(void) {
     BASE_BLOCK BaseBlock = { 0 };
     HBIN HBin = { 0 };
     KEY_NODE KeyNode = { 0 };
+    SECURITY_KEY SecurityKey = { 0 };
 
     DWORD dwResult = SUCCESS;
 
-    HANDLE hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD_Backup", GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    HANDLE hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD", GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
     ParseFileHeader(&BaseBlock, hFile);
 
@@ -26,18 +28,46 @@ int wmain(void) {
     DWORD dwCellType = 0;
     DWORD dwCellSize = 0;
 
-    while (dwResult != FAILURE) {
-
-        dwResult = dwCellType = ParseCell(hFile, &dwCellSize);
+    while ((dwCellType = ParseCell(hFile, &dwCellSize)) != FAILURE) {
 
         switch (dwCellType) {
+
+        case CELL_INDEX_LEAF:
+
+            break;
+
+        case CELL_FAST_LEAF:
+
+            break;
+
+        case CELL_HASH_LEAF:
+
+            break;
+
+        case CELL_INDEX_ROOT:
+
+            break;
 
         case CELL_KEY_NODE:
 
             ParseKeyNodeCell(&KeyNode, hFile, dwCellSize);
-        }
+            break;
 
-        break; // temp
+        case CELL_KEY_VALUE:
+
+            break;
+
+        case CELL_KEY_SECURITY:
+
+            ParseSecurityKey(&SecurityKey, hFile, dwCellSize);
+            break;
+
+        case CELL_BIG_DATA:
+
+            break;
+
+        default: break;
+        }
     }
 
     return SUCCESS;
@@ -73,7 +103,7 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
     CharToWchar(pBaseBlock->szRegfSigneture, szTempSigneture, 5);
     pReadedData += 4;
 
-    wprintf(L"    Signeture:  %s\n", pBaseBlock->szRegfSigneture);
+    wprintf(L"    Signeture:                         %s\n", pBaseBlock->szRegfSigneture);
 
     // Primary sequence number
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
@@ -85,7 +115,7 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
     pBaseBlock->dwSecondarySequenceNumber = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    SequenceNo. { %d, %d }\n", pBaseBlock->dwPrimarySequenceNumber, pBaseBlock->dwSecondarySequenceNumber);
+    wprintf(L"    SequenceNumber:                    {0x%X, 0x%X}\n", pBaseBlock->dwPrimarySequenceNumber, pBaseBlock->dwSecondarySequenceNumber);
 
     // Last written timestamp
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
@@ -97,7 +127,7 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
 
     SYSTEMTIME stLastWrittenTimeStamp = { 0 };
     FileTimeToSystemTime(&pBaseBlock->ftLastWrittenTimeStamp, &stLastWrittenTimeStamp);
-    wprintf(L"    Last written time: %04d/%02d/%02d %02d:%02d\n"
+    wprintf(L"    Last written time:                 %04d/%02d/%02d %02d:%02d\n"
         , stLastWrittenTimeStamp.wYear, stLastWrittenTimeStamp.wMonth, stLastWrittenTimeStamp.wDay
         , stLastWrittenTimeStamp.wHour, stLastWrittenTimeStamp.wMinute);
 
@@ -111,42 +141,42 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
     pBaseBlock->dwWriterMinorVersion = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    Maj.Min  %d.%d\n", pBaseBlock->dwWriterMajorVersion, pBaseBlock->dwWriterMinorVersion);
+    wprintf(L"    Maj.Min                            %d.%d\n", pBaseBlock->dwWriterMajorVersion, pBaseBlock->dwWriterMinorVersion);
 
     // File type
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->dwFileType = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    File type:  %d\n", pBaseBlock->dwFileType);
+    wprintf(L"    File type:                         0x%X\n", pBaseBlock->dwFileType);
 
     // File format
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->dwFileFormat = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    File format:  %d\n", pBaseBlock->dwFileFormat);
+    wprintf(L"    File format:                       0x%X\n", pBaseBlock->dwFileFormat);
 
     // Root cell offset
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->dwRootCellOffset = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    Root cell offset:  %d\n", pBaseBlock->dwRootCellOffset);
+    wprintf(L"    Root cell offset:                  0x%X\n", pBaseBlock->dwRootCellOffset);
 
     // Hive bins data size
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->dwHiveBinsDataSize = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    Hive bins data:  %d\n", pBaseBlock->dwHiveBinsDataSize);
+    wprintf(L"    Hive bins data:                    0x%X\n", pBaseBlock->dwHiveBinsDataSize);
 
     // Clustering factor
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->dwClusteringFactor = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    Clustering factor:  %d\n", pBaseBlock->dwClusteringFactor);
+    wprintf(L"    Clustering factor:                 0x%X\n", pBaseBlock->dwClusteringFactor);
 
     // File name
     CHAR szTempFileName[64];
@@ -154,7 +184,7 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
     pReadedData += 64;
 
     ByteToWchar(pBaseBlock->szFileName, szTempFileName, 64);
-    wprintf(L"    File name:  %s\n", pBaseBlock->szFileName);
+    wprintf(L"    File name:                         %s\n", pBaseBlock->szFileName);
 
     // Resource manager guid
     ByteToGuid(pReadedData, &pBaseBlock->guidRmId);
@@ -162,7 +192,7 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
     GuidToWchar(szRmGuidString, &pBaseBlock->guidRmId);
     pReadedData += 16;
 
-    wprintf(L"    RmId:  %s\n", szRmGuidString);
+    wprintf(L"    RmId:                              %s\n", szRmGuidString);
 
 
     // Log file guid
@@ -171,14 +201,14 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
     GuidToWchar(szLogGuidString, &pBaseBlock->guidLogId);
     pReadedData += 16;
 
-    wprintf(L"    LogId:  %s\n", szLogGuidString);
+    wprintf(L"    LogId:                             %s\n", szLogGuidString);
 
     // Guid flags
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->dwGuidFlags = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    Guid flags:  %x\n", pBaseBlock->dwGuidFlags);
+    wprintf(L"    Guid flags:                        0x%X\n", pBaseBlock->dwGuidFlags);
 
     // Transaction manager guid
     ByteToGuid(pReadedData, &pBaseBlock->guidTmId);
@@ -186,14 +216,14 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
     GuidToWchar(szTmGuidString, &pBaseBlock->guidTmId);
     pReadedData += 16;
 
-    wprintf(L"    TmId:  %s\n", szTmGuidString);
+    wprintf(L"    TmId:                              %s\n", szTmGuidString);
 
     // Guid signeture
     for (int i = 0; i < 4; i++) szTempSigneture[i] = pReadedData[i];
     CharToWchar(pBaseBlock->szGuidSigneture, szTempSigneture, 5);
     pReadedData += 4;
 
-    wprintf(L"    Guid signeture:  %s\n", pBaseBlock->szGuidSigneture);
+    wprintf(L"    Guid signeture:                    %s\n", pBaseBlock->szGuidSigneture);
 
     // Last reorganized time
 
@@ -206,7 +236,7 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
 
     SYSTEMTIME stLastReorganizedTime = { 0 };
     FileTimeToSystemTime(&pBaseBlock->ftLastReorganizedTime, &stLastReorganizedTime);
-    wprintf(L"    Last reorganized time: %04d/%02d/%02d %02d:%02d\n"
+    wprintf(L"    Last reorganized time:             %04d/%02d/%02d %02d:%02d\n"
         , stLastReorganizedTime.wYear, stLastReorganizedTime.wMonth, stLastReorganizedTime.wDay
         , stLastReorganizedTime.wHour, stLastReorganizedTime.wMinute);
 
@@ -251,6 +281,7 @@ BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
 
     // Move 4096 bytes
     SetFilePointer(hFile, 4096, NULL, FILE_BEGIN);
+    dwAbsoluteOffsetCurrentPointer += 4096;
 
     return SUCCESS;
 }
@@ -283,21 +314,21 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
     CharToWchar(pHBin->szHBinSigneture, szTempSigneture, 5);
     pReadedData += 4;
 
-    wprintf(L"    Signeture:  %s\n", pHBin->szHBinSigneture);
+    wprintf(L"    Signeture:                         %s\n", pHBin->szHBinSigneture);
 
     // Relative offset
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pHBin->dwRelativeOffset = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    Relative offset:  %d\n", pHBin->dwRelativeOffset);
+    wprintf(L"    Relative offset:                   0x%X\n", pHBin->dwRelativeOffset);
 
     // Size
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pHBin->dwSize = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    Size:  %d\n", pHBin->dwSize);
+    wprintf(L"    Size:                              0x%X\n", pHBin->dwSize);
 
     // Reserved
     pReadedData += 8;
@@ -312,7 +343,7 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
 
     SYSTEMTIME stTimeStamp;
     FileTimeToSystemTime(&pHBin->TimeStamp, &stTimeStamp);
-    wprintf(L"    Time stamp: %04d/%02d/%02d %02d:%02d\n"
+    wprintf(L"    Time stamp:                        %04d/%02d/%02d %02d:%02d\n"
         , stTimeStamp.wYear, stTimeStamp.wMonth, stTimeStamp.wDay
         , stTimeStamp.wHour, stTimeStamp.wMinute);
 
@@ -323,6 +354,7 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
 
     // Move 32 bytes
     SetFilePointer(hFile, 4096 + 32, NULL, FILE_BEGIN);
+    dwAbsoluteOffsetCurrentPointer += 32;
 
     return SUCCESS;
 }
@@ -330,9 +362,11 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
 
 DWORD ParseCell(HANDLE hFile, LPDWORD pCellSize) {
 
-    BYTE byReadData[6] = { 0 };
+    SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
+
+    BYTE byReadData[32] = { 0 };
     PBYTE pReadedData = NULL;
-    DWORD nBaseBlockSize = 6;
+    DWORD nBaseBlockSize = 32;
     DWORD nReadedSize = 0;
 
     BYTE dwDwordArray[4] = { 0 };
@@ -346,8 +380,58 @@ DWORD ParseCell(HANDLE hFile, LPDWORD pCellSize) {
     }
 
     pReadedData = byReadData;
+    DWORD dwCellType = 0;
+    DWORD dwCellOffset = 0;
 
-    wprintf(L"Cell:\n");
+    // calculate Padding
+    for (int i = 0; i < 32; i++, dwCellOffset++) {
+
+        if (tolower(pReadedData[i]) == L'l' && tolower(pReadedData[i + 1]) == L'i') {
+
+            dwCellType = CELL_INDEX_LEAF;
+            break;
+        }
+        else if (tolower(pReadedData[i]) == L'l' && tolower(pReadedData[i + 1]) == L'f') {
+
+            dwCellType = CELL_FAST_LEAF;
+            break;
+        }
+        else if (tolower(pReadedData[i]) == L'l' && tolower(pReadedData[i + 1]) == L'h') {
+
+            dwCellType = CELL_HASH_LEAF;
+            break;
+        }
+        else if (tolower(pReadedData[i]) == L'r' && tolower(pReadedData[i + 1]) == L'i') {
+
+            dwCellType = CELL_INDEX_ROOT;
+            break;
+        }
+        else if (tolower(pReadedData[i]) == L'n' && tolower(pReadedData[i + 1]) == L'k') {
+
+            dwCellType = CELL_KEY_NODE;
+            break;
+        }
+        else if (tolower(pReadedData[i]) == L'v' && tolower(pReadedData[i + 1]) == L'k') {
+
+            dwCellType = CELL_KEY_VALUE;
+            break;
+        }
+        else if (tolower(pReadedData[i]) == L's' && tolower(pReadedData[i + 1]) == L'k') {
+
+            dwCellType = CELL_KEY_SECURITY;
+            break;
+        }
+        else if (tolower(pReadedData[i]) == L'd' && tolower(pReadedData[i + 1]) == L'b') {
+
+            dwCellType = CELL_BIG_DATA;
+            break;
+        }
+    }
+
+    dwCellOffset -= 4;
+    if (dwCellType == 0) return FAILURE;
+
+    wprintf(L"Cell: [%X][%X][%X][%X]\n", pReadedData[0], pReadedData[1], pReadedData[2], pReadedData[3]);
 
     WCHAR szCellSigneture[3] = L"";
     DWORD dwSize = 0;
@@ -358,22 +442,16 @@ DWORD ParseCell(HANDLE hFile, LPDWORD pCellSize) {
     *pCellSize = dwSize;
     pReadedData += 4;
 
-    wprintf(L"    Size:  %d\n", dwSize);
+    wprintf(L"    Size:                              0x%X\n", dwSize);
 
     // Cell signeture
     for (int i = 0; i < 2; i++) szTempSigneture[i] = pReadedData[i];
     CharToWchar(szCellSigneture, szTempSigneture, 3);
     pReadedData += 2;
 
-    wprintf(L"    Signeture:  %s\n", szCellSigneture);
+    wprintf(L"    Signeture:                         %s\n", szCellSigneture);
 
-    if (CHECK_RETURN(wcscmp(szCellSigneture, L"nk"))) {
+    dwAbsoluteOffsetCurrentPointer += 6;
 
-        return CELL_KEY_NODE;
-    }
-
-    // temporary return
-    return FAILURE;
-
-    return SUCCESS;
+    return dwCellType;
 }

@@ -2,9 +2,11 @@
 // Licensed under the MIT License.
 
 #include "RegistryLoader.h"
-
+#include <sddl.h>
 
 BOOL ParseKeyNodeCell(PKEY_NODE pKeyNode, HANDLE hFile, DWORD dwCellSize) {
+
+    SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
 
     PBYTE pReadedData = NULL;
     DWORD nBaseBlockSize = 0;
@@ -161,6 +163,76 @@ BOOL ParseKeyNodeCell(PKEY_NODE pKeyNode, HANDLE hFile, DWORD dwCellSize) {
     wprintf(L"    Key name:                          ");
     for (int i = 0; pReadedData[i] != NULL; i++) wprintf(L"%c", (WCHAR)pReadedData[i]);
     wprintf(L"\n");
+
+    pReadedData += (dwCellSize - (76 + 4));
+
+    dwAbsoluteOffsetCurrentPointer += (dwCellSize - 6);
+
+    return SUCCESS;
+}
+
+
+BOOL ParseSecurityKey(PSECURITY_KEY pSecurityKey, HANDLE hFile, DWORD dwCellSize) {
+
+    SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
+
+    PBYTE pReadedData = NULL;
+    DWORD nBaseBlockSize = 0;
+    DWORD nReadedSize = 0;
+
+    BYTE byDwordArray[4] = { 0 };
+
+    // Allocate memory for reading
+    if ((pReadedData = (BYTE*)calloc(dwCellSize, sizeof(BYTE))) == NULL) return 0;
+    nBaseBlockSize = dwCellSize;
+
+    if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
+
+        wprintf(L"ReadFile failed with %d", GetLastError());
+        return FAILURE;
+    }
+
+    // Reserved
+    pReadedData += 2;
+
+    // Flink
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pSecurityKey->dwFlink = *(DWORD*)byDwordArray;
+    pReadedData += 4;
+
+    wprintf(L"    Flink:                             0x%X\n", pSecurityKey->dwFlink);
+
+    // Blink
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pSecurityKey->dwBlink = *(DWORD*)byDwordArray;
+    pReadedData += 4;
+
+    wprintf(L"    Blink:                             0x%X\n", pSecurityKey->dwBlink);
+
+    // Reference count
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pSecurityKey->dwReferenceCount = *(DWORD*)byDwordArray;
+    pReadedData += 4;
+
+    wprintf(L"    Reference count:                   0x%X\n", pSecurityKey->dwReferenceCount);
+
+    // Security descriptor size
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pSecurityKey->dwSecurityDescriptorSize = *(DWORD*)byDwordArray;
+    pReadedData += 4;
+
+    wprintf(L"    Security descriptor size:          0x%X\n", pSecurityKey->dwSecurityDescriptorSize);
+
+    SECURITY_DESCRIPTOR* pSD = pReadedData;
+    LPWSTR lpSDString = NULL;
+
+    ConvertSecurityDescriptorToStringSecurityDescriptorW(pSD, SDDL_REVISION_1, DACL_SECURITY_INFORMATION, &lpSDString, NULL);
+
+    wprintf(L"    Security descriptor:               %s\n", lpSDString);
+
+    pReadedData += (dwCellSize - 6);
+
+    dwAbsoluteOffsetCurrentPointer += (dwCellSize - 6);
 
     return SUCCESS;
 }
