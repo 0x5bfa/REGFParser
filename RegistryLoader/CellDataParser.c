@@ -4,6 +4,15 @@
 #include "RegistryLoader.h"
 #include <sddl.h>
 
+
+typedef struct _ELEMENT {
+
+    DWORD dwKeyNodeOffset;
+    CHAR szNameHint[5];
+
+}ELEMENT, *PELEMENT;
+
+
 BOOL ParseKeyNodeCell(PKEY_NODE pKeyNode, HANDLE hFile, DWORD dwCellSize) {
 
     SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
@@ -233,6 +242,65 @@ BOOL ParseSecurityKey(PSECURITY_KEY pSecurityKey, HANDLE hFile, DWORD dwCellSize
     pReadedData += (dwCellSize - 6);
 
     dwAbsoluteOffsetCurrentPointer += (dwCellSize - 6);
+
+    return SUCCESS;
+}
+
+
+BOOL ParseFastLeaf(PFAST_LEAF pFastLeaf, HANDLE hFile, DWORD dwCellSize) {
+
+    SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
+
+    PBYTE pReadedData = NULL;
+    DWORD nBaseBlockSize = 0;
+    DWORD nReadedSize = 0;
+
+    BYTE byDwordArray[4] = { 0 };
+
+    // Allocate memory for reading
+    if ((pReadedData = (BYTE*)calloc(dwCellSize, sizeof(BYTE))) == NULL) return FAILURE;
+    nBaseBlockSize = dwCellSize;
+
+    if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
+
+        wprintf(L"ReadFile failed with %x\n", GetLastError());
+        return FAILURE;
+    }
+
+    // Number of elements
+    for (int i = 0; i < 2; i++) byDwordArray[i] = pReadedData[i];
+    pFastLeaf->nElements = *(DWORD*)byDwordArray;
+    pReadedData += 2;
+
+    wprintf(L"    Number of elements:                0x%X\n", pFastLeaf->nElements);
+
+    DWORD dwElementSize = 0;
+    dwElementSize = dwCellSize - (6 + 2);
+    DWORD nElements = 0;
+    nElements = (dwElementSize / 4);
+    if (dwElementSize % 4 != 0) nElements++;
+
+    PELEMENT pElement;
+    if ((pElement = (PELEMENT)calloc(nElements, sizeof(ELEMENT))) == NULL) return FAILURE;
+
+    for (int i = 0, j = 0; i < dwElementSize || j < nElements; i++) {
+
+        if (i == 0 || i % 8 == 0) { // offset
+
+            for (int k = 0; k < 4; k++) byDwordArray[k] = pReadedData[k];
+            pElement[j].dwKeyNodeOffset = *(DWORD*)byDwordArray;
+            pReadedData += 4;
+            wprintf(L"    Key node offset:                   0x%X\n", pElement[j].dwKeyNodeOffset);
+            j++;
+        }
+        else if (i % 4 == 0) { // name hint
+
+            for (int k = 0; k < 4; k++) pElement[j].szNameHint[k] = (CHAR)pReadedData[k];
+            wprintf(L"    Name hint:                         %hs\n", pElement[j].szNameHint);
+            pReadedData += 4;
+            j++;
+        }
+    }
 
     return SUCCESS;
 }

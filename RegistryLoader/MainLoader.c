@@ -5,17 +5,18 @@
 
 DWORD dwAbsoluteOffsetCurrentPointer = 0;
 
-BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile);
+BOOL ParseFileHeader(PFILE_HEADER pBaseBlock, HANDLE hFile);
 BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile);
 DWORD ParseCell(HANDLE hFile, LPDWORD pCellSize);
 
 
 int wmain(void) {
 
-    BASE_BLOCK BaseBlock = { 0 };
+    FILE_HEADER BaseBlock = { 0 };
     HBIN HBin = { 0 };
     KEY_NODE KeyNode = { 0 };
     SECURITY_KEY SecurityKey = { 0 };
+    FAST_LEAF FastLeaf = { 0 };
 
     DWORD dwResult = SUCCESS;
 
@@ -38,6 +39,7 @@ int wmain(void) {
 
         case CELL_FAST_LEAF:
 
+            ParseFastLeaf(&FastLeaf, hFile, dwCellSize);
             break;
 
         case CELL_HASH_LEAF:
@@ -74,7 +76,7 @@ int wmain(void) {
 }
 
 
-BOOL ParseFileHeader(PBASE_BLOCK pBaseBlock, HANDLE hFile) {
+BOOL ParseFileHeader(PFILE_HEADER pBaseBlock, HANDLE hFile) {
 
     // Base block size is 4096
     BYTE byReadData[4096] = { 0 };
@@ -311,10 +313,10 @@ BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
 
     // Regf signeture
     for (int i = 0; i < 4; i++) szTempSigneture[i] = pReadedData[i];
-    CharToWchar(pHBin->szHBinSigneture, szTempSigneture, 5);
+    CharToWchar(pHBin->szHiveBinSigneture, szTempSigneture, 5);
     pReadedData += 4;
 
-    wprintf(L"    Signeture:                         %s\n", pHBin->szHBinSigneture);
+    wprintf(L"    Signeture:                         %s\n", pHBin->szHiveBinSigneture);
 
     // Relative offset
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];

@@ -124,14 +124,14 @@ Offset|Length|Description
 
 Record|Description
 ---|---
-Index leaf (li)|Subkeys list
-Fast leaf (lf)|Subkeys list with name hints
-Hash leaf (lh)|Subkeys list with name hashes
-Index root (ri)|List of subkeys lists (used to subdivide subkeys lists)
-Key node (nk)|Registry key node
-Key value (vk)|Registry key value
-Key security (sk)|Security descriptor
-Big data (db)|List of data segments
+[Index leaf (li)]()|Subkeys list
+[Fast leaf (lf)]()|Subkeys list with name hints
+[Hash leaf (lh)]()|Subkeys list with name hashes
+[Index root (ri)]()|List of subkeys lists (used to subdivide subkeys lists)
+[Key node (nk)]()|Registry key node
+[Key value (vk)]()|Registry key value
+[Key security (sk)]()|Security descriptor
+[Big data (db)]()|List of data segments
 
 When a record (entity) contains an offset field pointing to another record (entity), this offset points to a cell containing the latter record (entity). As already mentioned above, an offset relative from the start of the hive bins data doesn't point anywhere when it is equal to `0xFFFFFFFF`.
 

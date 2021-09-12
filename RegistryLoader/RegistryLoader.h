@@ -25,7 +25,7 @@
 extern DWORD dwAbsoluteOffsetCurrentPointer;
 
 
-typedef struct _BASE_BLOCK {
+typedef struct _FILE_HEADER {
 
     WCHAR szRegfSigneture[5];
     DWORD dwPrimarySequenceNumber;
@@ -51,12 +51,12 @@ typedef struct _BASE_BLOCK {
     DWORD dwOffRegFlags;
     FILETIME ftSerializationTime;
 
-}BASE_BLOCK, *PBASE_BLOCK;
+}FILE_HEADER, *PFILE_HEADER;
 
 
 typedef struct _HBIN {
 
-    WCHAR szHBinSigneture[5];
+    WCHAR szHiveBinSigneture[5];
     DWORD dwRelativeOffset;
     DWORD dwSize;
     FILETIME TimeStamp;
@@ -99,7 +99,7 @@ typedef struct _KEY_NODE {
 typedef struct _SECURITY_KEY {
 
     DWORD dwSize;
-    WCHAR szKeyNodeSigneture[3];
+    WCHAR szSecurityKeySigneture[3];
     DWORD dwFlink;
     DWORD dwBlink;
     DWORD dwReferenceCount;
@@ -108,6 +108,14 @@ typedef struct _SECURITY_KEY {
 
 }SECURITY_KEY, *PSECURITY_KEY;
 
+
+typedef struct _FAST_LEAF {
+
+    DWORD dwSize;
+    WCHAR szFastLeafSigneture[3];
+    DWORD nElements;
+
+}FAST_LEAF, *PFAST_LEAF;
 
 // functions
 
@@ -118,3 +126,4 @@ BOOL GuidToWchar(WCHAR* szWideString, GUID* Guid);
 
 BOOL ParseKeyNodeCell(PKEY_NODE pKeyNode, HANDLE hFile, DWORD dwCellSize);
 BOOL ParseSecurityKey(PSECURITY_KEY pSecurityKey, HANDLE hFile, DWORD dwCellSize);
+BOOL ParseFastLeaf(PFAST_LEAF pFastLeaf, HANDLE hFile, DWORD dwCellSize);
