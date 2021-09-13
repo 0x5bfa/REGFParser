@@ -302,5 +302,124 @@ BOOL ParseFastLeaf(PFAST_LEAF pFastLeaf, HANDLE hFile, DWORD dwCellSize) {
         }
     }
 
+    dwAbsoluteOffsetCurrentPointer += (dwCellSize - 6);
+
+    return SUCCESS;
+}
+
+
+BOOL ParseValueKey(PVALUE_KEY pValueKey, HANDLE hFile, DWORD dwCellSize) {
+
+    SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
+
+    PBYTE pReadedData = NULL;
+    DWORD nBaseBlockSize = 0;
+    DWORD nReadedSize = 0;
+
+    BYTE byDwordArray[4] = { 0 };
+
+    // Allocate memory for reading
+    if ((pReadedData = (BYTE*)calloc(dwCellSize, sizeof(BYTE))) == NULL) return FAILURE;
+    nBaseBlockSize = dwCellSize;
+
+    if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
+
+        wprintf(L"ReadFile failed with %x\n", GetLastError());
+        return FAILURE;
+    }
+
+    // Value name size
+    for (int i = 0; i < 2; i++) byDwordArray[i] = pReadedData[i];
+    pValueKey->dwValueNameSize = *(DWORD*)byDwordArray;
+    pReadedData += 2;
+
+    wprintf(L"    Value name size:                   0x%X\n", pValueKey->dwValueNameSize);
+
+    // Data size
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pValueKey->dwDataSize = *(DWORD*)byDwordArray;
+    pReadedData += 4;
+
+    wprintf(L"    Data size:                         0x%X\n", pValueKey->dwDataSize);
+
+    // Data offset
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pValueKey->dwDataOffset = *(DWORD*)byDwordArray;
+    pReadedData += 4;
+
+    wprintf(L"    Data offset:                       0x%X\n", pValueKey->dwDataOffset);
+
+    // Data type
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pValueKey->dwDataType = *(DWORD*)byDwordArray;
+    pReadedData += 4;
+
+    wprintf(L"    Data type:                         0x%X\n", pValueKey->dwDataType);
+
+    // Flags
+    for (int i = 0; i < 2; i++) byDwordArray[i] = pReadedData[i];
+    pValueKey->dwFlags = *(DWORD*)byDwordArray;
+    pReadedData += 2;
+
+    wprintf(L"    Flags:                             0x%X\n", pValueKey->dwFlags);
+
+    // Spare
+    pReadedData += 2;
+
+    // Key name
+    wprintf(L"    Key name:                          ");
+    for (int i = 0; pReadedData[i] != NULL; i++) wprintf(L"%c", (WCHAR)pReadedData[i]);
+    wprintf(L"\n");
+
+    pReadedData += (dwCellSize - (20 + 6));
+
+    // Move to data offset
+    DWORD dwAbsoluteDataOffset = pValueKey->dwAbsoluteHiveBinOffset + pValueKey->dwDataOffset;
+
+    SetFilePointer(hFile, dwAbsoluteDataOffset, NULL, FILE_BEGIN);
+
+    // Read data size from data
+    BYTE DataSize[4];
+    PBYTE pDataSize = NULL;
+    DWORD dwDataSizeSize = 4;
+    DWORD dwDataSizeReaded = 0;
+
+    if (ReadFile(hFile, &DataSize, dwDataSizeSize, &dwDataSizeReaded, NULL) == FAILURE) {
+
+        wprintf(L"ReadFile failed with %x\n", GetLastError());
+        return FAILURE;
+    }
+
+    pDataSize = DataSize;
+
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pDataSize[i];
+    DWORD dwDataSize = abs(*(DWORD*)byDwordArray);
+    pDataSize += 4;
+
+    // Data size
+    wprintf(L"    Data size from data offset:        0x%X\n", dwDataSize);
+
+    PBYTE pData = NULL;
+    DWORD dwReadedDataSize;
+    if ((pData = (PBYTE)calloc(dwDataSize, sizeof(BYTE))) == NULL) return FAILURE;
+
+    if (ReadFile(hFile, pData, dwDataSize, &dwReadedDataSize, NULL) == FAILURE) {
+
+        wprintf(L"ReadFile failed with %x\n", GetLastError());
+        return FAILURE;
+    }
+
+    // Data
+    wprintf(L"    Data:                              ");
+
+    for (int i = 0; i < (dwDataSize - 4); i++) {
+
+        wprintf(L"%X", pData[i]);
+        if (i != ((dwDataSize - 4) - 1)) wprintf(L",");
+        else wprintf(L"\n");
+    }
+
+    dwAbsoluteOffsetCurrentPointer += (dwCellSize + dwDataSize - 6);
+
     return SUCCESS;
 }

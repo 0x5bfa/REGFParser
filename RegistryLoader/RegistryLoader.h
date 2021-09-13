@@ -54,14 +54,14 @@ typedef struct _FILE_HEADER {
 }FILE_HEADER, *PFILE_HEADER;
 
 
-typedef struct _HBIN {
+typedef struct _HIVE_BIN {
 
     WCHAR szHiveBinSigneture[5];
     DWORD dwRelativeOffset;
     DWORD dwSize;
     FILETIME TimeStamp;
 
-}HBIN, *PHBIN;
+}HIVE_BIN, *PHIVE_BIN;
 
 
 typedef struct _KEY_NODE {
@@ -88,11 +88,6 @@ typedef struct _KEY_NODE {
     DWORD dwClassNameLength;
     DWORD dwKeyNameString;
 
-
-
-
-
-
 }KEY_NODE, *PKEY_NODE;
 
 
@@ -117,6 +112,22 @@ typedef struct _FAST_LEAF {
 
 }FAST_LEAF, *PFAST_LEAF;
 
+
+typedef struct _VALUE_KEY {
+
+    DWORD dwAbsoluteHiveBinOffset;
+
+    DWORD dwSize;
+    WCHAR szValueKeySigneture[3];
+    DWORD dwValueNameSize;
+    DWORD dwDataSize;
+    DWORD dwDataOffset;
+    DWORD dwDataType;
+    DWORD dwFlags;
+    DWORD dwValueNameString;
+
+}VALUE_KEY, *PVALUE_KEY;
+
 // functions
 
 BOOL ByteToGuid(PBYTE pData, GUID* guidResultGuid);
@@ -127,3 +138,4 @@ BOOL GuidToWchar(WCHAR* szWideString, GUID* Guid);
 BOOL ParseKeyNodeCell(PKEY_NODE pKeyNode, HANDLE hFile, DWORD dwCellSize);
 BOOL ParseSecurityKey(PSECURITY_KEY pSecurityKey, HANDLE hFile, DWORD dwCellSize);
 BOOL ParseFastLeaf(PFAST_LEAF pFastLeaf, HANDLE hFile, DWORD dwCellSize);
+BOOL ParseValueKey(PVALUE_KEY pValueKey, HANDLE hFile, DWORD dwCellSize);

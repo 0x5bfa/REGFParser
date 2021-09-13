@@ -6,25 +6,26 @@
 DWORD dwAbsoluteOffsetCurrentPointer = 0;
 
 BOOL ParseFileHeader(PFILE_HEADER pBaseBlock, HANDLE hFile);
-BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile);
+BOOL ParseHiveBinHeader(PHIVE_BIN pHBin, HANDLE hFile);
 DWORD ParseCell(HANDLE hFile, LPDWORD pCellSize);
 
 
 int wmain(void) {
 
-    FILE_HEADER BaseBlock = { 0 };
-    HBIN HBin = { 0 };
+    FILE_HEADER FileHeader = { 0 };
+    HIVE_BIN HiveBin = { 0 };
     KEY_NODE KeyNode = { 0 };
     SECURITY_KEY SecurityKey = { 0 };
     FAST_LEAF FastLeaf = { 0 };
+    VALUE_KEY ValueKey = { 0 };
 
     DWORD dwResult = SUCCESS;
 
     HANDLE hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD", GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
-    ParseFileHeader(&BaseBlock, hFile);
+    ParseFileHeader(&FileHeader, hFile);
 
-    ParseHiveBinHeader(&HBin, hFile);
+    ParseHiveBinHeader(&HiveBin, hFile);
 
     DWORD dwCellType = 0;
     DWORD dwCellSize = 0;
@@ -57,6 +58,8 @@ int wmain(void) {
 
         case CELL_KEY_VALUE:
 
+            ValueKey.dwAbsoluteHiveBinOffset = (HiveBin.dwRelativeOffset + 0x1000);
+            ParseValueKey(&ValueKey, hFile, dwCellSize);
             break;
 
         case CELL_KEY_SECURITY:
@@ -289,7 +292,7 @@ BOOL ParseFileHeader(PFILE_HEADER pBaseBlock, HANDLE hFile) {
 }
 
 
-BOOL ParseHiveBinHeader(PHBIN pHBin, HANDLE hFile) {
+BOOL ParseHiveBinHeader(PHIVE_BIN pHBin, HANDLE hFile) {
 
     // Hive bin header size is 32
     BYTE byReadData[32] = { 0 };
@@ -433,7 +436,7 @@ DWORD ParseCell(HANDLE hFile, LPDWORD pCellSize) {
     dwCellOffset -= 4;
     if (dwCellType == 0) return FAILURE;
 
-    wprintf(L"Cell: [%X][%X][%X][%X]\n", pReadedData[0], pReadedData[1], pReadedData[2], pReadedData[3]);
+    wprintf(L"\nCell: [%X][%X][%X][%X]\n", pReadedData[0], pReadedData[1], pReadedData[2], pReadedData[3]);
 
     WCHAR szCellSigneture[3] = L"";
     DWORD dwSize = 0;
