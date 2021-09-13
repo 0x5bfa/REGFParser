@@ -434,6 +434,8 @@ DWORD ParseCell(HANDLE hFile, LPDWORD pCellSize) {
     }
 
     dwCellOffset -= 4;
+    pReadedData += dwCellOffset;
+    dwAbsoluteOffsetCurrentPointer += dwCellOffset;
     if (dwCellType == 0) return FAILURE;
 
     wprintf(L"\nCell: [%X][%X][%X][%X]\n", pReadedData[0], pReadedData[1], pReadedData[2], pReadedData[3]);
