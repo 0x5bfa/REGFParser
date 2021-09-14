@@ -170,7 +170,7 @@ BOOL ParseKeyNodeCell(PKEY_NODE pKeyNode, HANDLE hFile, DWORD dwCellSize) {
 
     // Key name
     wprintf(L"    Key name:                          ");
-    for (int i = 0; pReadedData[i] != NULL; i++) wprintf(L"%c", (WCHAR)pReadedData[i]);
+    for (int i = 0; i < pKeyNode->dwKeyNameLength; i++) wprintf(L"%c", (WCHAR)pReadedData[i]);
     wprintf(L"\n");
 
     pReadedData += (dwCellSize - (76 + 4));
@@ -310,6 +310,8 @@ BOOL ParseFastLeaf(PFAST_LEAF pFastLeaf, HANDLE hFile, DWORD dwCellSize) {
 
 BOOL ParseValueKey(PVALUE_KEY pValueKey, HANDLE hFile, DWORD dwCellSize) {
 
+    wprintf(L"(Absolute offset: %X)\n", dwAbsoluteOffsetCurrentPointer);
+
     SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
 
     PBYTE pReadedData = NULL;
@@ -368,7 +370,7 @@ BOOL ParseValueKey(PVALUE_KEY pValueKey, HANDLE hFile, DWORD dwCellSize) {
 
     // Key name
     wprintf(L"    Key name:                          ");
-    for (int i = 0; pReadedData[i] != NULL; i++) wprintf(L"%c", (WCHAR)pReadedData[i]);
+    for (int i = 0; i < pValueKey->dwValueNameSize; i++) wprintf(L"%c", (WCHAR)pReadedData[i]);
     wprintf(L"\n");
 
     pReadedData += (dwCellSize - (20 + 6));
@@ -378,6 +380,11 @@ BOOL ParseValueKey(PVALUE_KEY pValueKey, HANDLE hFile, DWORD dwCellSize) {
 
     SetFilePointer(hFile, dwAbsoluteDataOffset, NULL, FILE_BEGIN);
 
+    if (pValueKey->dwDataType == REG_DWORD) {
+
+        wprintf(L"    Data:                              0x%X\n", pValueKey->dwDataOffset);
+        return SUCCESS;
+    }
     // Read data size from data
     BYTE DataSize[4];
     PBYTE pDataSize = NULL;

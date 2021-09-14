@@ -21,7 +21,12 @@ int wmain(void) {
 
     DWORD dwResult = SUCCESS;
 
-    HANDLE hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD", GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    HANDLE hFile;
+    if ((hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD", GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)) == INVALID_HANDLE_VALUE) {
+
+        wprintf(L"ReadFile failed with 0x%X\n", GetLastError());
+        return FAILURE;
+    }
 
     ParseFileHeader(&FileHeader, hFile);
 
