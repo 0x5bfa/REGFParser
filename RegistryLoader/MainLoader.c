@@ -12,6 +12,8 @@ DWORD ParseCell(HANDLE hFile, LPDWORD pCellSize);
 
 int wmain(void) {
 
+    HANDLE hFile = NULL;
+
     FILE_HEADER FileHeader = { 0 };
     HIVE_BIN HiveBin = { 0 };
     KEY_NODE KeyNode = { 0 };
@@ -19,22 +21,30 @@ int wmain(void) {
     FAST_LEAF FastLeaf = { 0 };
     VALUE_KEY ValueKey = { 0 };
 
-    DWORD dwResult = SUCCESS;
-
-    HANDLE hFile;
     if ((hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD", GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)) == INVALID_HANDLE_VALUE) {
 
-        wprintf(L"ReadFile failed with 0x%X\n", GetLastError());
+        wprintf(L"ReadFile failed with 0x%X.\n", GetLastError());
         return FAILURE;
     }
 
-    ParseFileHeader(&FileHeader, hFile);
+    // Parse 4096 bytes
+    if (ParseFileHeader(&FileHeader, hFile) == FAILURE) {
 
-    ParseHiveBinHeader(&HiveBin, hFile);
+        wprintf(L"ParseFileHeader failed.\n");
+        return FAILURE;
+    }
 
-    DWORD dwCellType = 0;
+    // Parse 32 bytes
+    if (ParseHiveBinHeader(&HiveBin, hFile) == FAILURE) {
+
+        wprintf(L"ParseFileHeader failed.\n");
+        return FAILURE;
+    }
+
+    DWORD dwCellType = REG_NONE;
     DWORD dwCellSize = 0;
 
+    /*
     while ((dwCellType = ParseCell(hFile, &dwCellSize)) != FAILURE) {
 
         switch (dwCellType) {
@@ -79,6 +89,7 @@ int wmain(void) {
         default: break;
         }
     }
+    */
 
     return SUCCESS;
 }

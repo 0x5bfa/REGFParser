@@ -9,8 +9,12 @@
 #pragma comment (lib, "Shlwapi.lib")
 #pragma warning (disable: 4996)
 
+
+// Defines
+
 #define SUCCESS 1
 #define FAILURE 0
+
 #define CHECK_RETURN(x) ((x) == 0)
 
 #define CELL_INDEX_LEAF   0x002
@@ -21,6 +25,9 @@
 #define CELL_KEY_VALUE    0x040
 #define CELL_KEY_SECURITY 0x080
 #define CELL_BIG_DATA     0x100
+
+
+// global variable
 
 extern DWORD dwAbsoluteOffsetCurrentPointer;
 
@@ -128,7 +135,8 @@ typedef struct _VALUE_KEY {
 
 }VALUE_KEY, *PVALUE_KEY;
 
-// functions
+
+// Functions
 
 BOOL ByteToGuid(PBYTE pData, GUID* guidResultGuid);
 BOOL CharToWchar(WCHAR* szWideString, CHAR* szSingleString, DWORD dwSizeToCopy);
