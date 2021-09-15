@@ -5,33 +5,23 @@
 #include <sddl.h>
 
 
-typedef struct _ELEMENT {
+BOOL ParseKeyNodeCell(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset) {
 
-    DWORD dwKeyNodeOffset;
-    CHAR szNameHint[5];
-
-}ELEMENT, *PELEMENT;
-
-
-BOOL ParseKeyNodeCell(PKEY_NODE pKeyNode, HANDLE hFile, DWORD dwCellSize) {
-
-    SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
+    SetFilePointer(hFile, dwAbsoluteOffset, NULL, FILE_BEGIN);
 
     PBYTE pReadedData = NULL;
-    DWORD nBaseBlockSize = 0;
     DWORD nReadedSize = 0;
 
-    BYTE byDwordArray[4] = { 0 };
-
     // Allocate memory for reading
-    if ((pReadedData = (BYTE*)calloc(dwCellSize, sizeof(BYTE))) == NULL) return 0;
-    nBaseBlockSize = dwCellSize;
+    if ((pReadedData = (BYTE*)calloc(pKeyNode->dwSize, sizeof(BYTE))) == NULL) return FAILURE;
 
-    if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
+    if (ReadFile(hFile, pReadedData, pKeyNode->dwSize, &nReadedSize, NULL) == FAILURE) {
 
         wprintf(L"ReadFile failed with %d", GetLastError());
         return FAILURE;
     }
+
+    BYTE byDwordArray[4] = { 0 };
 
     // Flags
     for (int i = 0; i < 2; i++) byDwordArray[i] = pReadedData[i];
@@ -173,15 +163,15 @@ BOOL ParseKeyNodeCell(PKEY_NODE pKeyNode, HANDLE hFile, DWORD dwCellSize) {
     for (int i = 0; i < pKeyNode->dwKeyNameLength; i++) wprintf(L"%c", (WCHAR)pReadedData[i]);
     wprintf(L"\n");
 
-    pReadedData += (dwCellSize - (76 + 4));
+    pReadedData += (pKeyNode->dwSize - (76 + 4));
 
-    dwAbsoluteOffsetCurrentPointer += (dwCellSize - 6);
+    dwAbsoluteOffsetCurrentPointer += (pKeyNode->dwSize - 6);
 
     return SUCCESS;
 }
 
 
-BOOL ParseSecurityKey(PSECURITY_KEY pSecurityKey, HANDLE hFile, DWORD dwCellSize) {
+BOOL ParseSecurityKey(HANDLE hFile, PSECURITY_KEY pSecurityKey, DWORD dwAbsoluteOffset) {
 
     SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
 
@@ -192,8 +182,8 @@ BOOL ParseSecurityKey(PSECURITY_KEY pSecurityKey, HANDLE hFile, DWORD dwCellSize
     BYTE byDwordArray[4] = { 0 };
 
     // Allocate memory for reading
-    if ((pReadedData = (BYTE*)calloc(dwCellSize, sizeof(BYTE))) == NULL) return 0;
-    nBaseBlockSize = dwCellSize;
+    if ((pReadedData = (BYTE*)calloc(pSecurityKey->dwSize, sizeof(BYTE))) == NULL) return 0;
+    nBaseBlockSize = pSecurityKey->dwSize;
 
     if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
 
@@ -239,15 +229,15 @@ BOOL ParseSecurityKey(PSECURITY_KEY pSecurityKey, HANDLE hFile, DWORD dwCellSize
 
     wprintf(L"    Security descriptor:               %s\n", lpSDString);
 
-    pReadedData += (dwCellSize - 6);
+    pReadedData += (pSecurityKey->dwSize - 6);
 
-    dwAbsoluteOffsetCurrentPointer += (dwCellSize - 6);
+    dwAbsoluteOffsetCurrentPointer += (pSecurityKey->dwSize - 6);
 
     return SUCCESS;
 }
 
 
-BOOL ParseFastLeaf(PFAST_LEAF pFastLeaf, HANDLE hFile, DWORD dwCellSize) {
+BOOL ParseFastLeaf(HANDLE hFile, PFAST_LEAF pFastLeaf, DWORD dwAbsoluteOffset) {
 
     SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
 
@@ -258,8 +248,8 @@ BOOL ParseFastLeaf(PFAST_LEAF pFastLeaf, HANDLE hFile, DWORD dwCellSize) {
     BYTE byDwordArray[4] = { 0 };
 
     // Allocate memory for reading
-    if ((pReadedData = (BYTE*)calloc(dwCellSize, sizeof(BYTE))) == NULL) return FAILURE;
-    nBaseBlockSize = dwCellSize;
+    if ((pReadedData = (BYTE*)calloc(pFastLeaf->dwSize, sizeof(BYTE))) == NULL) return FAILURE;
+    nBaseBlockSize = pFastLeaf->dwSize;
 
     if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
 
@@ -275,7 +265,7 @@ BOOL ParseFastLeaf(PFAST_LEAF pFastLeaf, HANDLE hFile, DWORD dwCellSize) {
     wprintf(L"    Number of elements:                0x%X\n", pFastLeaf->nElements);
 
     DWORD dwElementSize = 0;
-    dwElementSize = dwCellSize - (6 + 2);
+    dwElementSize = pFastLeaf->dwSize - (6 + 2);
     DWORD nElements = 0;
     nElements = (dwElementSize / 4);
     if (dwElementSize % 4 != 0) nElements++;
@@ -302,13 +292,13 @@ BOOL ParseFastLeaf(PFAST_LEAF pFastLeaf, HANDLE hFile, DWORD dwCellSize) {
         }
     }
 
-    dwAbsoluteOffsetCurrentPointer += (dwCellSize - 6);
+    dwAbsoluteOffsetCurrentPointer += (pFastLeaf->dwSize - 6);
 
     return SUCCESS;
 }
 
 
-BOOL ParseValueKey(PVALUE_KEY pValueKey, HANDLE hFile, DWORD dwCellSize) {
+BOOL ParseValueKey(HANDLE hFile, PVALUE_KEY pValueKey, DWORD dwAbsoluteOffset) {
 
     wprintf(L"(Absolute offset: %X)\n", dwAbsoluteOffsetCurrentPointer);
 
@@ -321,8 +311,8 @@ BOOL ParseValueKey(PVALUE_KEY pValueKey, HANDLE hFile, DWORD dwCellSize) {
     BYTE byDwordArray[4] = { 0 };
 
     // Allocate memory for reading
-    if ((pReadedData = (BYTE*)calloc(dwCellSize, sizeof(BYTE))) == NULL) return FAILURE;
-    nBaseBlockSize = dwCellSize;
+    if ((pReadedData = (BYTE*)calloc(pValueKey->dwSize, sizeof(BYTE))) == NULL) return FAILURE;
+    nBaseBlockSize = pValueKey->dwSize;
 
     if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
 
@@ -373,7 +363,7 @@ BOOL ParseValueKey(PVALUE_KEY pValueKey, HANDLE hFile, DWORD dwCellSize) {
     for (int i = 0; i < pValueKey->dwValueNameSize; i++) wprintf(L"%c", (WCHAR)pReadedData[i]);
     wprintf(L"\n");
 
-    pReadedData += (dwCellSize - (20 + 6));
+    pReadedData += (pValueKey->dwSize - (20 + 6));
 
     // Move to data offset
     DWORD dwAbsoluteDataOffset = pValueKey->dwAbsoluteHiveBinOffset + pValueKey->dwDataOffset;
@@ -426,7 +416,7 @@ BOOL ParseValueKey(PVALUE_KEY pValueKey, HANDLE hFile, DWORD dwCellSize) {
         else wprintf(L"\n");
     }
 
-    dwAbsoluteOffsetCurrentPointer += (dwCellSize + dwDataSize - 6);
+    dwAbsoluteOffsetCurrentPointer += (pValueKey->dwSize + dwDataSize - 6);
 
     return SUCCESS;
 }

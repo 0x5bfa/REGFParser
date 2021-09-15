@@ -5,17 +5,18 @@
 
 DWORD dwAbsoluteOffsetCurrentPointer = 0;
 
-BOOL ParseFileHeader(PFILE_HEADER pBaseBlock, HANDLE hFile);
-BOOL ParseHiveBinHeader(PHIVE_BIN pHBin, HANDLE hFile);
-DWORD ParseCell(HANDLE hFile, LPDWORD pCellSize);
+BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock);
+BOOL ParseHiveBinHeader(HANDLE hFile, PHIVE_BIN_HEADER pHBin);
+BOOL ParseCell(HANDLE hFile, LPDWORD pCellSize, DWORD dwAbsoluteCellOffset);
 
 
 int wmain(void) {
 
     HANDLE hFile = NULL;
+    DWORD dwAbsoluteOffset = 0;
 
     FILE_HEADER FileHeader = { 0 };
-    HIVE_BIN HiveBin = { 0 };
+    HIVE_BIN_HEADER HiveBinHeader = { 0 };
     KEY_NODE KeyNode = { 0 };
     SECURITY_KEY SecurityKey = { 0 };
     FAST_LEAF FastLeaf = { 0 };
@@ -27,26 +28,34 @@ int wmain(void) {
         return FAILURE;
     }
 
-    // Parse 4096 bytes
-    if (ParseFileHeader(&FileHeader, hFile) == FAILURE) {
+    // Parse 0x1000 bytes
+    if (ParseFileHeader(hFile, &FileHeader) == FAILURE) {
 
         wprintf(L"ParseFileHeader failed.\n");
         return FAILURE;
     }
 
-    // Parse 32 bytes
-    if (ParseHiveBinHeader(&HiveBin, hFile) == FAILURE) {
+    // Parse 0x20 bytes
+    if (ParseHiveBinHeader(hFile, &HiveBinHeader) == FAILURE) {
 
-        wprintf(L"ParseFileHeader failed.\n");
+        wprintf(L"ParseHiveBinHeader failed.\n");
         return FAILURE;
     }
 
-    DWORD dwCellType = REG_NONE;
+    // Parse root key of a hive bin and recurse
     DWORD dwCellSize = 0;
+    DWORD dwCellType = REG_NONE;
+    dwAbsoluteOffset = (FILE_HEADER_SIZE + HiveBinHeader.dwRelativeOffset + HIVE_BIN_HEADER_SIZE);
+    if ((dwCellType = ParseCell(hFile, &dwCellSize, dwAbsoluteOffset)) == FAILURE) {
 
-    /*
-    while ((dwCellType = ParseCell(hFile, &dwCellSize)) != FAILURE) {
+        wprintf(L"ParseCell failed.\n");
+        return FAILURE;
+    }
 
+    dwAbsoluteOffset += (4 + 2); // cell size + cell signeture size
+
+    do {
+    
         switch (dwCellType) {
 
         case CELL_INDEX_LEAF:
@@ -55,7 +64,12 @@ int wmain(void) {
 
         case CELL_FAST_LEAF:
 
-            ParseFastLeaf(&FastLeaf, hFile, dwCellSize);
+            FastLeaf.dwSize = dwCellSize;
+            if (ParseFastLeaf(&FastLeaf, hFile, dwAbsoluteOffset) == FAILURE) {
+
+                wprintf(L"ParseFastLeaf failed.\n");
+                return FAILURE;
+            }
             break;
 
         case CELL_HASH_LEAF:
@@ -68,18 +82,33 @@ int wmain(void) {
 
         case CELL_KEY_NODE:
 
-            ParseKeyNodeCell(&KeyNode, hFile, dwCellSize);
+            KeyNode.dwSize = dwCellSize;
+            if (ParseKeyNodeCell(hFile, &KeyNode, dwAbsoluteOffset) == FAILURE) {
+
+                wprintf(L"ParseKeyNodeCell failed.\n");
+                return FAILURE;
+            }
             break;
 
         case CELL_KEY_VALUE:
 
-            ValueKey.dwAbsoluteHiveBinOffset = (HiveBin.dwRelativeOffset + 0x1000);
-            ParseValueKey(&ValueKey, hFile, dwCellSize);
+            ValueKey.dwSize = dwCellSize;
+            ValueKey.dwAbsoluteHiveBinOffset = (HiveBinHeader.dwRelativeOffset + FILE_HEADER_SIZE);
+            if (ParseValueKey(hFile, &ValueKey, dwAbsoluteOffset) == FAILURE) {
+
+                wprintf(L"ParseValueKey failed.\n");
+                return FAILURE;
+            }
             break;
 
         case CELL_KEY_SECURITY:
 
-            ParseSecurityKey(&SecurityKey, hFile, dwCellSize);
+            SecurityKey.dwSize = dwCellSize;
+            if(ParseSecurityKey(hFile, &SecurityKey, dwAbsoluteOffset) == FAILURE){
+
+                wprintf(L"ParseSecurityKey failed.\n");
+                return FAILURE;
+            }
             break;
 
         case CELL_BIG_DATA:
@@ -88,32 +117,28 @@ int wmain(void) {
 
         default: break;
         }
-    }
-    */
+
+    } while (ParseCell(hFile, &dwCellSize, dwAbsoluteOffset) != FAILURE);
 
     return SUCCESS;
 }
 
 
-BOOL ParseFileHeader(PFILE_HEADER pBaseBlock, HANDLE hFile) {
+BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock) {
 
-    // Base block size is 4096
     BYTE byReadData[4096] = { 0 };
     PBYTE pReadedData = NULL;
     DWORD nBaseBlockSize = 4096;
     DWORD nReadedSize = 0;
 
-    BYTE byDwordArray[4] = { 0 };
-    FILETIME ftBaseBlockTimeStamp = { 0 };
-    SYSTEMTIME stBaseBlockTimeStamp = { 0 };
-    CHAR szTempSigneture[5] = "";
-
-    // read file until 4096 bytes
     if (ReadFile(hFile, &byReadData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
 
-        wprintf(L"ReadFile failed with %d", GetLastError());
+        wprintf(L"ReadFile failed with 0X%x\n", GetLastError());
         return FAILURE;
     }
+
+    BYTE byDwordArray[4] = { 0 };
+    CHAR szTempSigneture[5] = "";
 
     pReadedData = byReadData;
 
@@ -121,10 +146,10 @@ BOOL ParseFileHeader(PFILE_HEADER pBaseBlock, HANDLE hFile) {
 
     // Regf signeture
     for (int i = 0; i < 4; i++) szTempSigneture[i] = pReadedData[i];
-    CharToWchar(pBaseBlock->szRegfSigneture, szTempSigneture, 5);
+    pBaseBlock->lpRegfSigneture = szTempSigneture;
     pReadedData += 4;
 
-    wprintf(L"    Signeture:                         %s\n", pBaseBlock->szRegfSigneture);
+    wprintf(L"    Signeture:                         %hs\n", pBaseBlock->lpRegfSigneture);
 
     // Primary sequence number
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
@@ -215,7 +240,6 @@ BOOL ParseFileHeader(PFILE_HEADER pBaseBlock, HANDLE hFile) {
 
     wprintf(L"    RmId:                              %s\n", szRmGuidString);
 
-
     // Log file guid
     ByteToGuid(pReadedData, &pBaseBlock->guidLogId);
     WCHAR szLogGuidString[40] = L"";
@@ -247,7 +271,6 @@ BOOL ParseFileHeader(PFILE_HEADER pBaseBlock, HANDLE hFile) {
     wprintf(L"    Guid signeture:                    %s\n", pBaseBlock->szGuidSigneture);
 
     // Last reorganized time
-
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->ftLastReorganizedTime.dwLowDateTime = *(DWORD*)byDwordArray;
     pReadedData += 4;
@@ -262,7 +285,6 @@ BOOL ParseFileHeader(PFILE_HEADER pBaseBlock, HANDLE hFile) {
         , stLastReorganizedTime.wHour, stLastReorganizedTime.wMinute);
 
     // Offline registry signeture
-
     pReadedData += 4;
 
     // Offline registry flags
@@ -295,36 +317,32 @@ BOOL ParseFileHeader(PFILE_HEADER pBaseBlock, HANDLE hFile) {
     // Boot recover
     pReadedData += 4;
 
-    // Rewind
-    // pReadedData -= 4096;
-
     wprintf(L"\n");
 
-    // Move 4096 bytes
-    SetFilePointer(hFile, 4096, NULL, FILE_BEGIN);
-    dwAbsoluteOffsetCurrentPointer += 4096;
+    // Constant
+    dwAbsoluteOffsetCurrentPointer = FILE_HEADER_SIZE;
 
     return SUCCESS;
 }
 
 
-BOOL ParseHiveBinHeader(PHIVE_BIN pHBin, HANDLE hFile) {
+BOOL ParseHiveBinHeader(HANDLE hFile, PHIVE_BIN_HEADER pHBin) {
 
-    // Hive bin header size is 32
+    SetFilePointer(hFile, FILE_HEADER_SIZE, NULL, FILE_BEGIN);
+
     BYTE byReadData[32] = { 0 };
     PBYTE pReadedData = NULL;
     DWORD nBaseBlockSize = 32;
     DWORD nReadedSize = 0;
 
-    BYTE byDwordArray[4] = { 0 };
-    CHAR szTempSigneture[5] = "";
-
-    // read file until 4096 bytes
     if (ReadFile(hFile, &byReadData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
 
-        wprintf(L"ReadFile failed with %d", GetLastError());
+        wprintf(L"ReadFile failed with 0X%x\n", GetLastError());
         return FAILURE;
     }
+
+    BYTE byDwordArray[4] = { 0 };
+    CHAR szTempSigneture[5] = "";
 
     pReadedData = byReadData;
 
@@ -368,113 +386,65 @@ BOOL ParseHiveBinHeader(PHIVE_BIN pHBin, HANDLE hFile) {
         , stTimeStamp.wYear, stTimeStamp.wMonth, stTimeStamp.wDay
         , stTimeStamp.wHour, stTimeStamp.wMinute);
 
-    // Spara (or MemAlloc)
+    // Spare (or MemAlloc field)
     pReadedData += 4;
 
     wprintf(L"\n");
 
     // Move 32 bytes
-    SetFilePointer(hFile, 4096 + 32, NULL, FILE_BEGIN);
     dwAbsoluteOffsetCurrentPointer += 32;
 
     return SUCCESS;
 }
 
 
-DWORD ParseCell(HANDLE hFile, LPDWORD pCellSize) {
+BOOL ParseCell(HANDLE hFile, LPDWORD pCellSize, DWORD dwAbsoluteCellOffset) {
 
-    SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
+    SetFilePointer(hFile, dwAbsoluteCellOffset, NULL, FILE_BEGIN);
 
-    BYTE byReadData[32] = { 0 };
+    BYTE byReadData[6] = { 0 };
     PBYTE pReadedData = NULL;
-    DWORD nBaseBlockSize = 32;
+    DWORD nBaseBlockSize = 6;
     DWORD nReadedSize = 0;
 
-    BYTE dwDwordArray[4] = { 0 };
-    CHAR szTempSigneture[3] = "";
-
-    // read 6 bytes
     if (ReadFile(hFile, &byReadData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
 
-        wprintf(L"ReadFile failed with %d", GetLastError());
+        wprintf(L"ReadFile failed with 0x%X.\n", GetLastError());
         return FAILURE;
     }
 
+    BYTE byDwordArray[4] = { 0 };
+    CHAR szCellSigneture[3] = "";
+
     pReadedData = byReadData;
-    DWORD dwCellType = 0;
-    DWORD dwCellOffset = 0;
 
-    // calculate Padding
-    for (int i = 0; i < 32; i++, dwCellOffset++) {
-
-        if (tolower(pReadedData[i]) == L'l' && tolower(pReadedData[i + 1]) == L'i') {
-
-            dwCellType = CELL_INDEX_LEAF;
-            break;
-        }
-        else if (tolower(pReadedData[i]) == L'l' && tolower(pReadedData[i + 1]) == L'f') {
-
-            dwCellType = CELL_FAST_LEAF;
-            break;
-        }
-        else if (tolower(pReadedData[i]) == L'l' && tolower(pReadedData[i + 1]) == L'h') {
-
-            dwCellType = CELL_HASH_LEAF;
-            break;
-        }
-        else if (tolower(pReadedData[i]) == L'r' && tolower(pReadedData[i + 1]) == L'i') {
-
-            dwCellType = CELL_INDEX_ROOT;
-            break;
-        }
-        else if (tolower(pReadedData[i]) == L'n' && tolower(pReadedData[i + 1]) == L'k') {
-
-            dwCellType = CELL_KEY_NODE;
-            break;
-        }
-        else if (tolower(pReadedData[i]) == L'v' && tolower(pReadedData[i + 1]) == L'k') {
-
-            dwCellType = CELL_KEY_VALUE;
-            break;
-        }
-        else if (tolower(pReadedData[i]) == L's' && tolower(pReadedData[i + 1]) == L'k') {
-
-            dwCellType = CELL_KEY_SECURITY;
-            break;
-        }
-        else if (tolower(pReadedData[i]) == L'd' && tolower(pReadedData[i + 1]) == L'b') {
-
-            dwCellType = CELL_BIG_DATA;
-            break;
-        }
-    }
-
-    dwCellOffset -= 4;
-    pReadedData += dwCellOffset;
-    dwAbsoluteOffsetCurrentPointer += dwCellOffset;
-    if (dwCellType == 0) return FAILURE;
-
-    wprintf(L"\nCell: [%X][%X][%X][%X]\n", pReadedData[0], pReadedData[1], pReadedData[2], pReadedData[3]);
-
-    WCHAR szCellSigneture[3] = L"";
-    DWORD dwSize = 0;
+    wprintf(L"\nCell:\n");
 
     // Cell size
-    for (int i = 0; i < 4; i++) dwDwordArray[i] = pReadedData[i];
-    dwSize = abs(*(DWORD*)dwDwordArray);
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    DWORD dwSize = abs(*(DWORD*)byDwordArray);
     *pCellSize = dwSize;
     pReadedData += 4;
 
     wprintf(L"    Size:                              0x%X\n", dwSize);
 
     // Cell signeture
-    for (int i = 0; i < 2; i++) szTempSigneture[i] = pReadedData[i];
-    CharToWchar(szCellSigneture, szTempSigneture, 3);
+    for (int i = 0; i < 2; i++) szCellSigneture[i] = pReadedData[i];
     pReadedData += 2;
 
-    wprintf(L"    Signeture:                         %s\n", szCellSigneture);
+    wprintf(L"    Signeture:                         %hs\n", szCellSigneture);
 
-    dwAbsoluteOffsetCurrentPointer += 6;
+    DWORD dwCellType = 0;
+
+    if (CHECK_RETURN(StrCmpA(szCellSigneture, "li")))      dwCellType = CELL_INDEX_LEAF;
+    else if (CHECK_RETURN(StrCmpA(szCellSigneture, "lf"))) dwCellType = CELL_FAST_LEAF;
+    else if (CHECK_RETURN(StrCmpA(szCellSigneture, "lh"))) dwCellType = CELL_HASH_LEAF;
+    else if (CHECK_RETURN(StrCmpA(szCellSigneture, "ri"))) dwCellType = CELL_INDEX_ROOT;
+    else if (CHECK_RETURN(StrCmpA(szCellSigneture, "nk"))) dwCellType = CELL_KEY_NODE;
+    else if (CHECK_RETURN(StrCmpA(szCellSigneture, "vk"))) dwCellType = CELL_KEY_VALUE;
+    else if (CHECK_RETURN(StrCmpA(szCellSigneture, "sk"))) dwCellType = CELL_KEY_SECURITY;
+    else if (CHECK_RETURN(StrCmpA(szCellSigneture, "db"))) dwCellType = CELL_BIG_DATA;
+    else return FAILURE;
 
     return dwCellType;
 }

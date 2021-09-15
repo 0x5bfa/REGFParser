@@ -26,15 +26,23 @@
 #define CELL_KEY_SECURITY 0x080
 #define CELL_BIG_DATA     0x100
 
+#define FILE_HEADER_SIZE     0x1000
+#define HIVE_BIN_HEADER_SIZE 0x20
+
+#define TO_SUBOBJ         0x0
+#define TO_PARENT         0x1
+
 
 // global variable
 
 extern DWORD dwAbsoluteOffsetCurrentPointer;
 
 
+
+// regf
 typedef struct _FILE_HEADER {
 
-    WCHAR szRegfSigneture[5];
+    LPSTR lpRegfSigneture;
     DWORD dwPrimarySequenceNumber;
     DWORD dwSecondarySequenceNumber;
     FILETIME ftLastWrittenTimeStamp;
@@ -60,17 +68,50 @@ typedef struct _FILE_HEADER {
 
 }FILE_HEADER, *PFILE_HEADER;
 
-
-typedef struct _HIVE_BIN {
+// hbin
+typedef struct _HIVE_BIN_HEADER {
 
     WCHAR szHiveBinSigneture[5];
     DWORD dwRelativeOffset;
     DWORD dwSize;
     FILETIME TimeStamp;
 
-}HIVE_BIN, *PHIVE_BIN;
+}HIVE_BIN_HEADER, *PHIVE_BIN_HEADER;
 
+// li
+typedef struct _INDEX_LEAF {
 
+    DWORD dwSize;
+    WCHAR szIndexLeafSigneture[3];
+
+}INDEX_LEAF, *PINDEX_LEAF;
+
+// lf
+typedef struct _FAST_LEAF {
+
+    DWORD dwSize;
+    WCHAR szFastLeafSigneture[3];
+    DWORD nElements;
+
+}FAST_LEAF, *PFAST_LEAF;
+
+// lh
+typedef struct _HASH_LEAF {
+
+    DWORD dwSize;
+    WCHAR szHashLeafSigneture[3];
+
+}HASH_LEAF, *PHASH_LEAF;
+
+// ri
+typedef struct _INDEX_ROOT {
+
+    DWORD dwSize;
+    WCHAR szIndexRootSigneture[3];
+
+}INDEX_ROOT, *PINDEX_ROOT;
+
+// nk
 typedef struct _KEY_NODE {
 
     DWORD dwSize;
@@ -97,29 +138,7 @@ typedef struct _KEY_NODE {
 
 }KEY_NODE, *PKEY_NODE;
 
-
-typedef struct _SECURITY_KEY {
-
-    DWORD dwSize;
-    WCHAR szSecurityKeySigneture[3];
-    DWORD dwFlink;
-    DWORD dwBlink;
-    DWORD dwReferenceCount;
-    DWORD dwSecurityDescriptorSize;
-
-
-}SECURITY_KEY, *PSECURITY_KEY;
-
-
-typedef struct _FAST_LEAF {
-
-    DWORD dwSize;
-    WCHAR szFastLeafSigneture[3];
-    DWORD nElements;
-
-}FAST_LEAF, *PFAST_LEAF;
-
-
+// vk
 typedef struct _VALUE_KEY {
 
     DWORD dwAbsoluteHiveBinOffset;
@@ -135,6 +154,28 @@ typedef struct _VALUE_KEY {
 
 }VALUE_KEY, *PVALUE_KEY;
 
+// sk
+typedef struct _SECURITY_KEY {
+
+    DWORD dwSize;
+    WCHAR szSecurityKeySigneture[3];
+    DWORD dwFlink;
+    DWORD dwBlink;
+    DWORD dwReferenceCount;
+    DWORD dwSecurityDescriptorSize;
+
+
+}SECURITY_KEY, *PSECURITY_KEY;
+
+
+typedef struct _ELEMENT {
+
+    DWORD dwKeyNodeOffset;
+    CHAR szNameHint[5];
+
+}ELEMENT, * PELEMENT;
+
+
 
 // Functions
 
@@ -143,7 +184,7 @@ BOOL CharToWchar(WCHAR* szWideString, CHAR* szSingleString, DWORD dwSizeToCopy);
 BOOL ByteToWchar(WCHAR* szWideString, BYTE* pData, DWORD dwSizeToCopy);
 BOOL GuidToWchar(WCHAR* szWideString, GUID* Guid);
 
-BOOL ParseKeyNodeCell(PKEY_NODE pKeyNode, HANDLE hFile, DWORD dwCellSize);
-BOOL ParseSecurityKey(PSECURITY_KEY pSecurityKey, HANDLE hFile, DWORD dwCellSize);
-BOOL ParseFastLeaf(PFAST_LEAF pFastLeaf, HANDLE hFile, DWORD dwCellSize);
-BOOL ParseValueKey(PVALUE_KEY pValueKey, HANDLE hFile, DWORD dwCellSize);
+BOOL ParseKeyNodeCell(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset);
+BOOL ParseSecurityKey(HANDLE hFile, PSECURITY_KEY pSecurityKey, DWORD dwAbsoluteOffset);
+BOOL ParseFastLeaf(HANDLE hFile, PFAST_LEAF pFastLeaf, DWORD dwAbsoluteOffset);
+BOOL ParseValueKey(HANDLE hFile, PVALUE_KEY pValueKey, DWORD dwAbsoluteOffset);
