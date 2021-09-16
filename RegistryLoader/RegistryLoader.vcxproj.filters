@@ -29,5 +29,8 @@
     <ClInclude Include="RegistryLoader.h">
       <Filter>Header files</Filter>
     </ClInclude>
+    <ClInclude Include="HiveData.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

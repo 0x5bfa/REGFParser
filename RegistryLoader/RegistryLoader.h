@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <Windows.h>
+#include "HiveData.h"
 #include <Shlwapi.h>
 #pragma comment (lib, "Shlwapi.lib")
 #pragma warning (disable: 4996)
@@ -36,6 +37,7 @@
 // global variable
 
 extern DWORD dwAbsoluteOffsetCurrentPointer;
+extern DWORD dwAbsoluteCurrentHiveBinOffset;
 
 
 
@@ -139,7 +141,7 @@ typedef struct _KEY_NODE {
 }KEY_NODE, *PKEY_NODE;
 
 // vk
-typedef struct _VALUE_KEY {
+typedef struct _KEY_VALUE {
 
     DWORD dwAbsoluteHiveBinOffset;
 
@@ -152,10 +154,10 @@ typedef struct _VALUE_KEY {
     DWORD dwFlags;
     DWORD dwValueNameString;
 
-}VALUE_KEY, *PVALUE_KEY;
+}KEY_VALUE, *PKEY_VALUE;
 
 // sk
-typedef struct _SECURITY_KEY {
+typedef struct _KEY_SECURITY {
 
     DWORD dwSize;
     WCHAR szSecurityKeySigneture[3];
@@ -165,9 +167,17 @@ typedef struct _SECURITY_KEY {
     DWORD dwSecurityDescriptorSize;
 
 
-}SECURITY_KEY, *PSECURITY_KEY;
+}KEY_SECURITY, *PKEY_SECURITY;
 
+// bd
+typedef struct _BIG_DATA {
 
+    DWORD dwSize;
+    WCHAR szBigDataSigneture[3];
+
+}BIG_DATA, *PBIG_DATA;
+
+// elements list
 typedef struct _ELEMENT {
 
     DWORD dwKeyNodeOffset;
@@ -179,12 +189,14 @@ typedef struct _ELEMENT {
 
 // Functions
 
+BOOL ParseCell(HANDLE hFile, DWORD dwAbsoluteCellOffset);
+
+BOOL ParseKeyNode(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset);
+BOOL ParseKeySecurity(HANDLE hFile, PKEY_SECURITY pSecurityKey, DWORD dwAbsoluteOffset);
+BOOL ParseFastLeaf(HANDLE hFile, PFAST_LEAF pFastLeaf, DWORD dwAbsoluteOffset);
+BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset);
+
 BOOL ByteToGuid(PBYTE pData, GUID* guidResultGuid);
 BOOL CharToWchar(WCHAR* szWideString, CHAR* szSingleString, DWORD dwSizeToCopy);
 BOOL ByteToWchar(WCHAR* szWideString, BYTE* pData, DWORD dwSizeToCopy);
 BOOL GuidToWchar(WCHAR* szWideString, GUID* Guid);
-
-BOOL ParseKeyNodeCell(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset);
-BOOL ParseSecurityKey(HANDLE hFile, PSECURITY_KEY pSecurityKey, DWORD dwAbsoluteOffset);
-BOOL ParseFastLeaf(HANDLE hFile, PFAST_LEAF pFastLeaf, DWORD dwAbsoluteOffset);
-BOOL ParseValueKey(HANDLE hFile, PVALUE_KEY pValueKey, DWORD dwAbsoluteOffset);

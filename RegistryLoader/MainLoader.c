@@ -4,23 +4,27 @@
 #include "RegistryLoader.h"
 
 DWORD dwAbsoluteOffsetCurrentPointer = 0;
+DWORD dwAbsoluteCurrentHiveBinOffset = 0;
+
+INDEX_LEAF g_IndexLeaf = { 0 };
+FAST_LEAF g_FastLeaf = { 0 };
+HASH_LEAF g_HashLeaf = { 0 };
+INDEX_ROOT g_IndexRoot = { 0 };
+KEY_NODE g_KeyNode = { 0 };
+KEY_VALUE g_ValueKey = { 0 };
+KEY_SECURITY g_SecurityKey = { 0 };
+BIG_DATA g_BigData = { 0 };
 
 BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock);
 BOOL ParseHiveBinHeader(HANDLE hFile, PHIVE_BIN_HEADER pHBin);
-BOOL ParseCell(HANDLE hFile, LPDWORD pCellSize, DWORD dwAbsoluteCellOffset);
 
 
 int wmain(void) {
 
     HANDLE hFile = NULL;
-    DWORD dwAbsoluteOffset = 0;
 
     FILE_HEADER FileHeader = { 0 };
     HIVE_BIN_HEADER HiveBinHeader = { 0 };
-    KEY_NODE KeyNode = { 0 };
-    SECURITY_KEY SecurityKey = { 0 };
-    FAST_LEAF FastLeaf = { 0 };
-    VALUE_KEY ValueKey = { 0 };
 
     if ((hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD", GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)) == INVALID_HANDLE_VALUE) {
 
@@ -41,84 +45,16 @@ int wmain(void) {
         wprintf(L"ParseHiveBinHeader failed.\n");
         return FAILURE;
     }
+    dwAbsoluteCurrentHiveBinOffset = FILE_HEADER_SIZE;
 
-    // Parse root key of a hive bin and recurse
-    DWORD dwCellSize = 0;
+    // Parse root key of a hive bin
     DWORD dwCellType = REG_NONE;
-    dwAbsoluteOffset = (FILE_HEADER_SIZE + HiveBinHeader.dwRelativeOffset + HIVE_BIN_HEADER_SIZE);
-    if ((dwCellType = ParseCell(hFile, &dwCellSize, dwAbsoluteOffset)) == FAILURE) {
+    DWORD dwAbsoluteOffset = (FILE_HEADER_SIZE + HiveBinHeader.dwRelativeOffset + HIVE_BIN_HEADER_SIZE);
+    if (ParseCell(hFile, dwAbsoluteOffset) == FAILURE) {
 
         wprintf(L"ParseCell failed.\n");
         return FAILURE;
     }
-
-    dwAbsoluteOffset += (4 + 2); // cell size + cell signeture size
-
-    do {
-    
-        switch (dwCellType) {
-
-        case CELL_INDEX_LEAF:
-
-            break;
-
-        case CELL_FAST_LEAF:
-
-            FastLeaf.dwSize = dwCellSize;
-            if (ParseFastLeaf(&FastLeaf, hFile, dwAbsoluteOffset) == FAILURE) {
-
-                wprintf(L"ParseFastLeaf failed.\n");
-                return FAILURE;
-            }
-            break;
-
-        case CELL_HASH_LEAF:
-
-            break;
-
-        case CELL_INDEX_ROOT:
-
-            break;
-
-        case CELL_KEY_NODE:
-
-            KeyNode.dwSize = dwCellSize;
-            if (ParseKeyNodeCell(hFile, &KeyNode, dwAbsoluteOffset) == FAILURE) {
-
-                wprintf(L"ParseKeyNodeCell failed.\n");
-                return FAILURE;
-            }
-            break;
-
-        case CELL_KEY_VALUE:
-
-            ValueKey.dwSize = dwCellSize;
-            ValueKey.dwAbsoluteHiveBinOffset = (HiveBinHeader.dwRelativeOffset + FILE_HEADER_SIZE);
-            if (ParseValueKey(hFile, &ValueKey, dwAbsoluteOffset) == FAILURE) {
-
-                wprintf(L"ParseValueKey failed.\n");
-                return FAILURE;
-            }
-            break;
-
-        case CELL_KEY_SECURITY:
-
-            SecurityKey.dwSize = dwCellSize;
-            if(ParseSecurityKey(hFile, &SecurityKey, dwAbsoluteOffset) == FAILURE){
-
-                wprintf(L"ParseSecurityKey failed.\n");
-                return FAILURE;
-            }
-            break;
-
-        case CELL_BIG_DATA:
-
-            break;
-
-        default: break;
-        }
-
-    } while (ParseCell(hFile, &dwCellSize, dwAbsoluteOffset) != FAILURE);
 
     return SUCCESS;
 }
@@ -398,7 +334,7 @@ BOOL ParseHiveBinHeader(HANDLE hFile, PHIVE_BIN_HEADER pHBin) {
 }
 
 
-BOOL ParseCell(HANDLE hFile, LPDWORD pCellSize, DWORD dwAbsoluteCellOffset) {
+BOOL ParseCell(HANDLE hFile, DWORD dwAbsoluteCellOffset) {
 
     SetFilePointer(hFile, dwAbsoluteCellOffset, NULL, FILE_BEGIN);
 
@@ -423,7 +359,6 @@ BOOL ParseCell(HANDLE hFile, LPDWORD pCellSize, DWORD dwAbsoluteCellOffset) {
     // Cell size
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     DWORD dwSize = abs(*(DWORD*)byDwordArray);
-    *pCellSize = dwSize;
     pReadedData += 4;
 
     wprintf(L"    Size:                              0x%X\n", dwSize);
@@ -445,6 +380,75 @@ BOOL ParseCell(HANDLE hFile, LPDWORD pCellSize, DWORD dwAbsoluteCellOffset) {
     else if (CHECK_RETURN(StrCmpA(szCellSigneture, "sk"))) dwCellType = CELL_KEY_SECURITY;
     else if (CHECK_RETURN(StrCmpA(szCellSigneture, "db"))) dwCellType = CELL_BIG_DATA;
     else return FAILURE;
+
+    dwAbsoluteCellOffset += (HBIN_HEADER_BIN_SIZE_LEN + HBIN_HEADER_BIN_SIGNETURE_LEN);
+
+    switch (dwCellType) {
+
+    case CELL_INDEX_LEAF: {
+
+        break;
+
+    }
+    case CELL_FAST_LEAF: {
+
+        g_FastLeaf.dwSize = dwSize;
+        if (ParseFastLeaf(hFile, &g_FastLeaf, dwAbsoluteCellOffset) == FAILURE) {
+
+            wprintf(L"ParseFastLeaf failed.\n");
+            return FAILURE;
+        }
+        break;
+    }
+    case CELL_HASH_LEAF: {
+
+        break;
+    }
+    case CELL_INDEX_ROOT: {
+
+        break;
+    }
+    case CELL_KEY_NODE: {
+
+        g_KeyNode.dwSize = dwSize;
+        if (ParseKeyNode(hFile, &g_KeyNode, dwAbsoluteCellOffset) == FAILURE) {
+
+            wprintf(L"ParseKeyNode failed.\n");
+            return FAILURE;
+        }
+        break;
+    }
+    case CELL_KEY_VALUE: {
+
+        g_ValueKey.dwSize = dwSize;
+        g_ValueKey.dwAbsoluteHiveBinOffset = dwAbsoluteCurrentHiveBinOffset;
+        if (ParseKeyValue(hFile, &g_ValueKey, dwAbsoluteCellOffset) == FAILURE) {
+
+            wprintf(L"ParseKeyValue failed.\n");
+            return FAILURE;
+        }
+        break;
+
+    }
+    case CELL_KEY_SECURITY: {
+
+        g_SecurityKey.dwSize = dwSize;
+        if (ParseKeySecurity(hFile, &g_SecurityKey, dwAbsoluteCellOffset) == FAILURE) {
+
+            wprintf(L"ParseKeySecurity failed.\n");
+            return FAILURE;
+        }
+        break;
+
+    }
+    case CELL_BIG_DATA: {
+
+        break;
+
+    }
+    default: break;
+    }
+
 
     return dwCellType;
 }

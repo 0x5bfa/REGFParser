@@ -5,7 +5,83 @@
 #include <sddl.h>
 
 
-BOOL ParseKeyNodeCell(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset) {
+BOOL ParseIndexLeaf(HANDLE hFile, PINDEX_LEAF pIndexLeaf, DWORD dwAbsoluteOffset) {
+
+}
+
+
+BOOL ParseFastLeaf(HANDLE hFile, PFAST_LEAF pFastLeaf, DWORD dwAbsoluteOffset) {
+
+    SetFilePointer(hFile, dwAbsoluteOffset, NULL, FILE_BEGIN);
+
+    PBYTE pReadedData = NULL;
+    DWORD nBaseBlockSize = 0;
+    DWORD nReadedSize = 0;
+
+    BYTE byDwordArray[4] = { 0 };
+
+    // Allocate memory for reading
+    if ((pReadedData = (BYTE*)calloc(pFastLeaf->dwSize, sizeof(BYTE))) == NULL) return FAILURE;
+    nBaseBlockSize = pFastLeaf->dwSize;
+
+    if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
+
+        wprintf(L"ReadFile failed with %x\n", GetLastError());
+        return FAILURE;
+    }
+
+    // Number of elements
+    for (int i = 0; i < 2; i++) byDwordArray[i] = pReadedData[i];
+    pFastLeaf->nElements = *(DWORD*)byDwordArray;
+    pReadedData += 2;
+
+    wprintf(L"    Number of elements:                0x%X\n", pFastLeaf->nElements);
+
+    DWORD dwElementSize = 0;
+    dwElementSize = pFastLeaf->dwSize - (6 + 2);
+    DWORD nElements = 0;
+    nElements = (dwElementSize / 4);
+    if (dwElementSize % 4 != 0) nElements++;
+
+    PELEMENT pElement;
+    if ((pElement = (PELEMENT)calloc(nElements, sizeof(ELEMENT))) == NULL) return FAILURE;
+
+    for (int i = 0, j = 0; i < dwElementSize || j < nElements; i++) {
+
+        if (i == 0 || i % 8 == 0) { // offset
+
+            for (int k = 0; k < 4; k++) byDwordArray[k] = pReadedData[k];
+            pElement[j].dwKeyNodeOffset = *(DWORD*)byDwordArray;
+            pReadedData += 4;
+            wprintf(L"    Key node offset:                   0x%X\n", pElement[j].dwKeyNodeOffset);
+            j++;
+        }
+        else if (i % 4 == 0) { // name hint
+
+            for (int k = 0; k < 4; k++) pElement[j].szNameHint[k] = (CHAR)pReadedData[k];
+            wprintf(L"    Name hint:                         %hs\n", pElement[j].szNameHint);
+            pReadedData += 4;
+            j++;
+        }
+    }
+
+    // TODO: for (int i = 0; i < pFastLeaf->nElements; i++) {}
+
+    return SUCCESS;
+}
+
+
+BOOL ParseHashLeaf(HANDLE hFile, PHASH_LEAF pHashLeaf, DWORD dwAbsoluteOffset) {
+
+}
+
+
+BOOL ParseIndexRoot(HANDLE hFile, PINDEX_ROOT pIndexRoot, DWORD dwAbsoluteOffset) {
+
+}
+
+
+BOOL ParseKeyNode(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset) {
 
     SetFilePointer(hFile, dwAbsoluteOffset, NULL, FILE_BEGIN);
 
@@ -161,144 +237,17 @@ BOOL ParseKeyNodeCell(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset) 
     // Key name
     wprintf(L"    Key name:                          ");
     for (int i = 0; i < pKeyNode->dwKeyNameLength; i++) wprintf(L"%c", (WCHAR)pReadedData[i]);
+    pReadedData += (pKeyNode->dwSize - (76 + 4));
     wprintf(L"\n");
 
-    pReadedData += (pKeyNode->dwSize - (76 + 4));
+    DWORD dwCellSize = 0;
 
-    dwAbsoluteOffsetCurrentPointer += (pKeyNode->dwSize - 6);
-
+    ParseCell(hFile, dwAbsoluteCurrentHiveBinOffset + pKeyNode->dwSubKeysListOffset);
     return SUCCESS;
 }
 
 
-BOOL ParseSecurityKey(HANDLE hFile, PSECURITY_KEY pSecurityKey, DWORD dwAbsoluteOffset) {
-
-    SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
-
-    PBYTE pReadedData = NULL;
-    DWORD nBaseBlockSize = 0;
-    DWORD nReadedSize = 0;
-
-    BYTE byDwordArray[4] = { 0 };
-
-    // Allocate memory for reading
-    if ((pReadedData = (BYTE*)calloc(pSecurityKey->dwSize, sizeof(BYTE))) == NULL) return 0;
-    nBaseBlockSize = pSecurityKey->dwSize;
-
-    if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
-
-        wprintf(L"ReadFile failed with %d", GetLastError());
-        return FAILURE;
-    }
-
-    // Reserved
-    pReadedData += 2;
-
-    // Flink
-    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
-    pSecurityKey->dwFlink = *(DWORD*)byDwordArray;
-    pReadedData += 4;
-
-    wprintf(L"    Flink:                             0x%X\n", pSecurityKey->dwFlink);
-
-    // Blink
-    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
-    pSecurityKey->dwBlink = *(DWORD*)byDwordArray;
-    pReadedData += 4;
-
-    wprintf(L"    Blink:                             0x%X\n", pSecurityKey->dwBlink);
-
-    // Reference count
-    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
-    pSecurityKey->dwReferenceCount = *(DWORD*)byDwordArray;
-    pReadedData += 4;
-
-    wprintf(L"    Reference count:                   0x%X\n", pSecurityKey->dwReferenceCount);
-
-    // Security descriptor size
-    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
-    pSecurityKey->dwSecurityDescriptorSize = *(DWORD*)byDwordArray;
-    pReadedData += 4;
-
-    wprintf(L"    Security descriptor size:          0x%X\n", pSecurityKey->dwSecurityDescriptorSize);
-
-    SECURITY_DESCRIPTOR* pSD = pReadedData;
-    LPWSTR lpSDString = NULL;
-
-    ConvertSecurityDescriptorToStringSecurityDescriptorW(pSD, SDDL_REVISION_1, DACL_SECURITY_INFORMATION, &lpSDString, NULL);
-
-    wprintf(L"    Security descriptor:               %s\n", lpSDString);
-
-    pReadedData += (pSecurityKey->dwSize - 6);
-
-    dwAbsoluteOffsetCurrentPointer += (pSecurityKey->dwSize - 6);
-
-    return SUCCESS;
-}
-
-
-BOOL ParseFastLeaf(HANDLE hFile, PFAST_LEAF pFastLeaf, DWORD dwAbsoluteOffset) {
-
-    SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
-
-    PBYTE pReadedData = NULL;
-    DWORD nBaseBlockSize = 0;
-    DWORD nReadedSize = 0;
-
-    BYTE byDwordArray[4] = { 0 };
-
-    // Allocate memory for reading
-    if ((pReadedData = (BYTE*)calloc(pFastLeaf->dwSize, sizeof(BYTE))) == NULL) return FAILURE;
-    nBaseBlockSize = pFastLeaf->dwSize;
-
-    if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
-
-        wprintf(L"ReadFile failed with %x\n", GetLastError());
-        return FAILURE;
-    }
-
-    // Number of elements
-    for (int i = 0; i < 2; i++) byDwordArray[i] = pReadedData[i];
-    pFastLeaf->nElements = *(DWORD*)byDwordArray;
-    pReadedData += 2;
-
-    wprintf(L"    Number of elements:                0x%X\n", pFastLeaf->nElements);
-
-    DWORD dwElementSize = 0;
-    dwElementSize = pFastLeaf->dwSize - (6 + 2);
-    DWORD nElements = 0;
-    nElements = (dwElementSize / 4);
-    if (dwElementSize % 4 != 0) nElements++;
-
-    PELEMENT pElement;
-    if ((pElement = (PELEMENT)calloc(nElements, sizeof(ELEMENT))) == NULL) return FAILURE;
-
-    for (int i = 0, j = 0; i < dwElementSize || j < nElements; i++) {
-
-        if (i == 0 || i % 8 == 0) { // offset
-
-            for (int k = 0; k < 4; k++) byDwordArray[k] = pReadedData[k];
-            pElement[j].dwKeyNodeOffset = *(DWORD*)byDwordArray;
-            pReadedData += 4;
-            wprintf(L"    Key node offset:                   0x%X\n", pElement[j].dwKeyNodeOffset);
-            j++;
-        }
-        else if (i % 4 == 0) { // name hint
-
-            for (int k = 0; k < 4; k++) pElement[j].szNameHint[k] = (CHAR)pReadedData[k];
-            wprintf(L"    Name hint:                         %hs\n", pElement[j].szNameHint);
-            pReadedData += 4;
-            j++;
-        }
-    }
-
-    dwAbsoluteOffsetCurrentPointer += (pFastLeaf->dwSize - 6);
-
-    return SUCCESS;
-}
-
-
-BOOL ParseValueKey(HANDLE hFile, PVALUE_KEY pValueKey, DWORD dwAbsoluteOffset) {
+BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
 
     wprintf(L"(Absolute offset: %X)\n", dwAbsoluteOffsetCurrentPointer);
 
@@ -419,4 +368,75 @@ BOOL ParseValueKey(HANDLE hFile, PVALUE_KEY pValueKey, DWORD dwAbsoluteOffset) {
     dwAbsoluteOffsetCurrentPointer += (pValueKey->dwSize + dwDataSize - 6);
 
     return SUCCESS;
+}
+
+
+BOOL ParseKeySecurity(HANDLE hFile, PKEY_SECURITY pSecurityKey, DWORD dwAbsoluteOffset) {
+
+    SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
+
+    PBYTE pReadedData = NULL;
+    DWORD nBaseBlockSize = 0;
+    DWORD nReadedSize = 0;
+
+    BYTE byDwordArray[4] = { 0 };
+
+    // Allocate memory for reading
+    if ((pReadedData = (BYTE*)calloc(pSecurityKey->dwSize, sizeof(BYTE))) == NULL) return 0;
+    nBaseBlockSize = pSecurityKey->dwSize;
+
+    if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
+
+        wprintf(L"ReadFile failed with %d", GetLastError());
+        return FAILURE;
+    }
+
+    // Reserved
+    pReadedData += 2;
+
+    // Flink
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pSecurityKey->dwFlink = *(DWORD*)byDwordArray;
+    pReadedData += 4;
+
+    wprintf(L"    Flink:                             0x%X\n", pSecurityKey->dwFlink);
+
+    // Blink
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pSecurityKey->dwBlink = *(DWORD*)byDwordArray;
+    pReadedData += 4;
+
+    wprintf(L"    Blink:                             0x%X\n", pSecurityKey->dwBlink);
+
+    // Reference count
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pSecurityKey->dwReferenceCount = *(DWORD*)byDwordArray;
+    pReadedData += 4;
+
+    wprintf(L"    Reference count:                   0x%X\n", pSecurityKey->dwReferenceCount);
+
+    // Security descriptor size
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+    pSecurityKey->dwSecurityDescriptorSize = *(DWORD*)byDwordArray;
+    pReadedData += 4;
+
+    wprintf(L"    Security descriptor size:          0x%X\n", pSecurityKey->dwSecurityDescriptorSize);
+
+    SECURITY_DESCRIPTOR* pSD = pReadedData;
+    LPWSTR lpSDString = NULL;
+
+    ConvertSecurityDescriptorToStringSecurityDescriptorW(pSD, SDDL_REVISION_1, DACL_SECURITY_INFORMATION, &lpSDString, NULL);
+
+    wprintf(L"    Security descriptor:               %s\n", lpSDString);
+
+    pReadedData += (pSecurityKey->dwSize - 6);
+
+    dwAbsoluteOffsetCurrentPointer += (pSecurityKey->dwSize - 6);
+
+    return SUCCESS;
+}
+
+
+BOOL ParseBigData(HANDLE hFile, PBIG_DATA pBigData, DWORD dwAbsoluteOffset) {
+
 }

@@ -144,6 +144,7 @@
     <ClCompile Include="CellDataParser.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="HiveData.h" />
     <ClInclude Include="RegistryLoader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
