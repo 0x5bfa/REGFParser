@@ -40,27 +40,22 @@ BOOL ParseFastLeaf(HANDLE hFile, PFAST_LEAF pFastLeaf, DWORD dwAbsoluteOffset) {
     PELEMENT pElement = NULL;
     if ((pElement = (PELEMENT)calloc((pFastLeaf->nElements * 2), sizeof(ELEMENT))) == NULL) return FAILURE;
 
-    for (int i = 0, j = 0; i < (pFastLeaf->dwSize - (6 + 2)) || j < (pFastLeaf->nElements * 2); i++) {
+    for (int j = 0; j < pFastLeaf->nElements; j++) {
 
-        if (i == 0 || i % 8 == 0) { // offset
+        // Read 8 bytes
 
-            for (int k = 0; k < 4; k++) byDwordArray[k] = pReadedData[k];
-            pElement[j].dwKeyNodeOffset = *(DWORD*)byDwordArray;
-            pReadedData += 4;
-            wprintf(L"    Key node offset:                   0x%X\n", pElement[j].dwKeyNodeOffset);
-            j++;
-        }
-        else if (i % 4 == 0) { // name hint
+        // Offset
+        for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+        pElement[j].dwKeyNodeOffset = *(DWORD*)byDwordArray;
+        pReadedData += 4;
 
-            for (int k = 0; k < 4; k++) pElement[j].szNameHint[k] = (CHAR)pReadedData[k];
-            wprintf(L"    Name hint:                         %hs\n", pElement[j].szNameHint);
-            pReadedData += 4;
-            j++;
-        }
+        wprintf(L"    Key node offset:                   0x%X\n", pElement[j].dwKeyNodeOffset);
+
+        // Name hint
+        for (int i = 0; i < 4; i++) pElement[j].szNameHint[i] = (CHAR)pReadedData[i];
+        wprintf(L"    Name hint:                         %hs\n", pElement[j].szNameHint);
+        pReadedData += 4;
     }
-
-    wprintf(L"%d,%hs\n", pElement[0].dwKeyNodeOffset, pElement[0].szNameHint);
-    wprintf(L"%d,%hs\n", pElement[1].dwKeyNodeOffset, pElement[1].szNameHint);
 
     for (int i = 0; i < pFastLeaf->nElements; i++) {
 
