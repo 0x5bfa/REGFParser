@@ -37,16 +37,10 @@ BOOL ParseFastLeaf(HANDLE hFile, PFAST_LEAF pFastLeaf, DWORD dwAbsoluteOffset) {
 
     wprintf(L"    Number of elements:                0x%X\n", pFastLeaf->nElements);
 
-    DWORD dwElementSize = 0;
-    dwElementSize = pFastLeaf->dwSize - (6 + 2);
-    DWORD nElements = 0;
-    nElements = (dwElementSize / 4);
-    if (dwElementSize % 4 != 0) nElements++;
+    PELEMENT pElement = NULL;
+    if ((pElement = (PELEMENT)calloc((pFastLeaf->nElements * 2), sizeof(ELEMENT))) == NULL) return FAILURE;
 
-    PELEMENT pElement;
-    if ((pElement = (PELEMENT)calloc(nElements, sizeof(ELEMENT))) == NULL) return FAILURE;
-
-    for (int i = 0, j = 0; i < dwElementSize || j < nElements; i++) {
+    for (int i = 0, j = 0; i < (pFastLeaf->dwSize - (6 + 2)) || j < (pFastLeaf->nElements * 2); i++) {
 
         if (i == 0 || i % 8 == 0) { // offset
 
@@ -65,7 +59,17 @@ BOOL ParseFastLeaf(HANDLE hFile, PFAST_LEAF pFastLeaf, DWORD dwAbsoluteOffset) {
         }
     }
 
-    // TODO: for (int i = 0; i < pFastLeaf->nElements; i++) {}
+    wprintf(L"%d,%hs\n", pElement[0].dwKeyNodeOffset, pElement[0].szNameHint);
+    wprintf(L"%d,%hs\n", pElement[1].dwKeyNodeOffset, pElement[1].szNameHint);
+
+    for (int i = 0; i < pFastLeaf->nElements; i++) {
+
+        if (ParseCell(hFile, dwAbsoluteCurrentHiveBinOffset + pElement[i].dwKeyNodeOffset) == FAILURE) {
+
+            wprintf(L"ParseCell failed.\n");
+            return FAILURE;
+        }
+    }
 
     return SUCCESS;
 }
@@ -242,16 +246,38 @@ BOOL ParseKeyNode(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset) {
 
     DWORD dwCellSize = 0;
 
-    ParseCell(hFile, dwAbsoluteCurrentHiveBinOffset + pKeyNode->dwSubKeysListOffset);
+    if (pKeyNode->dwSubKeysListOffset != 0xFFFFFFFF) {
+
+        if (ParseCell(hFile, dwAbsoluteCurrentHiveBinOffset + pKeyNode->dwSubKeysListOffset) == FAILURE) {
+
+            wprintf(L"ParseCell failed.\n");
+            return FAILURE;
+        }
+    }
+    if (pKeyNode->dwKeyValuesListOffset != 0xFFFFFFFF) {
+
+        if (ParseKeyValueList(hFile, dwAbsoluteCurrentHiveBinOffset + pKeyNode->dwKeyValuesListOffset) == FAILURE) {
+
+            wprintf(L"ParseCell failed.\n");
+            return FAILURE;
+        }
+    }
+    if (pKeyNode->dwClassNameOffset != 0xFFFFFFFF) {
+
+        if (ParseCell(hFile, dwAbsoluteCurrentHiveBinOffset + pKeyNode->dwClassNameOffset) == FAILURE) {
+
+            wprintf(L"ParseCell failed.\n");
+            return FAILURE;
+        }
+    }
+
     return SUCCESS;
 }
 
 
 BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
 
-    wprintf(L"(Absolute offset: %X)\n", dwAbsoluteOffsetCurrentPointer);
-
-    SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
+    SetFilePointer(hFile, dwAbsoluteOffset, NULL, FILE_BEGIN);
 
     PBYTE pReadedData = NULL;
     DWORD nBaseBlockSize = 0;
@@ -364,8 +390,6 @@ BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
         if (i != ((dwDataSize - 4) - 1)) wprintf(L",");
         else wprintf(L"\n");
     }
-
-    dwAbsoluteOffsetCurrentPointer += (pValueKey->dwSize + dwDataSize - 6);
 
     return SUCCESS;
 }

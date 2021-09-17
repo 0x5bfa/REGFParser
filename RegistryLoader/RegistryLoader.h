@@ -30,9 +30,8 @@
 #define FILE_HEADER_SIZE     0x1000
 #define HIVE_BIN_HEADER_SIZE 0x20
 
-#define TO_SUBOBJ         0x0
-#define TO_PARENT         0x1
-
+#define OFFSET_TYPE_IS_CELL       0x001
+#define OFFSET_TYPE_IS_VALUE_LIST 0x002
 
 // global variable
 
@@ -190,6 +189,7 @@ typedef struct _ELEMENT {
 // Functions
 
 BOOL ParseCell(HANDLE hFile, DWORD dwAbsoluteCellOffset);
+BOOL ParseKeyValueList(HANDLE hFile, DWORD dwAbsoluteOffset);
 
 BOOL ParseKeyNode(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset);
 BOOL ParseKeySecurity(HANDLE hFile, PKEY_SECURITY pSecurityKey, DWORD dwAbsoluteOffset);

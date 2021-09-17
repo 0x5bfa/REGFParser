@@ -354,7 +354,7 @@ BOOL ParseCell(HANDLE hFile, DWORD dwAbsoluteCellOffset) {
 
     pReadedData = byReadData;
 
-    wprintf(L"\nCell:\n");
+    wprintf(L"\nCell:[%02X][%02X][%02X][%02X][%02X][%02X]\n", pReadedData[0], pReadedData[1], pReadedData[2], pReadedData[3], pReadedData[4], pReadedData[5]);
 
     // Cell size
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
@@ -451,4 +451,71 @@ BOOL ParseCell(HANDLE hFile, DWORD dwAbsoluteCellOffset) {
 
 
     return dwCellType;
+}
+
+
+BOOL ParseKeyValueList(HANDLE hFile, DWORD dwAbsoluteOffset) {
+
+    SetFilePointer(hFile, dwAbsoluteOffset, NULL, FILE_BEGIN);
+
+    PBYTE pReadData = NULL;
+    DWORD nReadedSize = 0;
+
+    if ((pReadData = (PBYTE)calloc(4, sizeof(BYTE))) == NULL) return FAILURE;
+
+    if (ReadFile(hFile, pReadData, 4, &nReadedSize, NULL) == FAILURE) {
+
+        wprintf(L"ReadFile failed with 0x%X.\n", GetLastError());
+        return FAILURE;
+    }
+
+    BYTE byDwordArray[4] = { 0 };
+
+    wprintf(L"\nValueList:[%02X][%02X][%02X][%02X]\n", pReadData[0], pReadData[1], pReadData[2], pReadData[3]);
+
+    // offset list size
+    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadData[i];
+    DWORD dwSize = abs(*(DWORD*)byDwordArray);
+    pReadData += 4;
+
+    wprintf(L"    Size:                              0x%X\n", dwSize);
+
+    LPDWORD pOffsets = NULL;
+
+    // Offset list
+    if ((pReadData = (PBYTE)calloc(dwSize - 4, sizeof(BYTE))) == NULL) return FAILURE;
+
+    if ((pOffsets = (LPDWORD)calloc((dwSize - 4) / 4, sizeof(DWORD))) == NULL) return FAILURE;
+
+    SetFilePointer(hFile, dwAbsoluteOffset + 4, NULL, FILE_BEGIN);
+
+    if (ReadFile(hFile, pReadData, dwSize - 4, &nReadedSize, NULL) == FAILURE) {
+
+        wprintf(L"ReadFile failed with 0x%X.\n", GetLastError());
+        return FAILURE;
+    }
+
+    // Parse
+    for (int j = 0; j < ((dwSize - 4) / 4); j++) {
+
+        // Offset
+        for (int i = 0; i < 4; i++) byDwordArray[i] = pReadData[i];
+        pOffsets[j] = abs(*(DWORD*)byDwordArray);
+        pReadData += 4;
+        wprintf(L"    Offset #%d:                         0x%X\n", j, pOffsets[j]);
+    }
+
+    // Move
+    for (int i = 0; i < ((dwSize - 4) / 4); i++) {
+
+        if (pOffsets[i] == 0x0) break;
+
+        if (ParseCell(hFile, dwAbsoluteCurrentHiveBinOffset + pOffsets[i]) == FAILURE) {
+
+            wprintf(L"ParseCell failed in ParseKeyValueList.\n");
+            return FAILURE;
+        }
+    }
+
+    return SUCCESS;
 }
