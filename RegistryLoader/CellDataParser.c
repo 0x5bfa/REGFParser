@@ -345,19 +345,20 @@ BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
         wprintf(L"    Data:                              0x%X\n", pValueKey->dwDataOffset);
         return SUCCESS;
     }
+
     // Read data size from data
-    BYTE DataSize[4];
+    BYTE byDataSize[4] = { 0 };
     PBYTE pDataSize = NULL;
     DWORD dwDataSizeSize = 4;
     DWORD dwDataSizeReaded = 0;
 
-    if (ReadFile(hFile, &DataSize, dwDataSizeSize, &dwDataSizeReaded, NULL) == FAILURE) {
+    if (ReadFile(hFile, &byDataSize, dwDataSizeSize, &dwDataSizeReaded, NULL) == FAILURE) {
 
         wprintf(L"ReadFile failed with %x\n", GetLastError());
         return FAILURE;
     }
 
-    pDataSize = DataSize;
+    pDataSize = byDataSize;
 
     for (int i = 0; i < 4; i++) byDwordArray[i] = pDataSize[i];
     DWORD dwDataSize = abs(*(DWORD*)byDwordArray);
@@ -392,7 +393,7 @@ BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
 
 BOOL ParseKeySecurity(HANDLE hFile, PKEY_SECURITY pSecurityKey, DWORD dwAbsoluteOffset) {
 
-    SetFilePointer(hFile, dwAbsoluteOffsetCurrentPointer, NULL, FILE_BEGIN);
+    SetFilePointer(hFile, dwAbsoluteOffset, NULL, FILE_BEGIN);
 
     PBYTE pReadedData = NULL;
     DWORD nBaseBlockSize = 0;
@@ -449,8 +450,6 @@ BOOL ParseKeySecurity(HANDLE hFile, PKEY_SECURITY pSecurityKey, DWORD dwAbsolute
     wprintf(L"    Security descriptor:               %s\n", lpSDString);
 
     pReadedData += (pSecurityKey->dwSize - 6);
-
-    dwAbsoluteOffsetCurrentPointer += (pSecurityKey->dwSize - 6);
 
     return SUCCESS;
 }

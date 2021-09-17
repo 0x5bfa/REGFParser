@@ -255,9 +255,6 @@ BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock) {
 
     wprintf(L"\n");
 
-    // Constant
-    dwAbsoluteOffsetCurrentPointer = FILE_HEADER_SIZE;
-
     return SUCCESS;
 }
 
@@ -326,9 +323,6 @@ BOOL ParseHiveBinHeader(HANDLE hFile, PHIVE_BIN_HEADER pHBin) {
     pReadedData += 4;
 
     wprintf(L"\n");
-
-    // Move 32 bytes
-    dwAbsoluteOffsetCurrentPointer += 32;
 
     return SUCCESS;
 }

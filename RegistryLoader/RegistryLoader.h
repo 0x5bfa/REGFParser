@@ -33,9 +33,8 @@
 #define OFFSET_TYPE_IS_CELL       0x001
 #define OFFSET_TYPE_IS_VALUE_LIST 0x002
 
-// global variable
+// global variables
 
-extern DWORD dwAbsoluteOffsetCurrentPointer;
 extern DWORD dwAbsoluteCurrentHiveBinOffset;
 
 
