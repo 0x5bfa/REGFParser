@@ -71,7 +71,7 @@ typedef struct _FILE_HEADER {
 // hbin
 typedef struct _HIVE_BIN_HEADER {
 
-    WCHAR szHiveBinSigneture[5];
+    CHAR szHiveBinSigneture[5];
     DWORD dwRelativeOffset;
     DWORD dwSize;
     FILETIME TimeStamp;
