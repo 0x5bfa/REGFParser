@@ -26,6 +26,8 @@ int wmain(void) {
     FILE_HEADER FileHeader = { 0 };
     HIVE_BIN_HEADER HiveBinHeader = { 0 };
 
+    LPWSTR lpKeyName[256] = L"NewStoreRoot\\BCD00000001\\Objects\\";
+
     if ((hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD", GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)) == INVALID_HANDLE_VALUE) {
 
         wprintf(L"ReadFile failed with 0x%X.\n", GetLastError());
@@ -33,28 +35,15 @@ int wmain(void) {
     }
 
     // Parse 0x1000 bytes
-    if (ParseFileHeader(hFile, &FileHeader) == FAILURE) {
-
-        wprintf(L"ParseFileHeader failed.\n");
-        return FAILURE;
-    }
+    if (ParseFileHeader(hFile, &FileHeader) == FAILURE) return FAILURE;
 
     // Parse 0x20 bytes
-    if (ParseHiveBinHeader(hFile, &HiveBinHeader) == FAILURE) {
+    if (ParseHiveBinHeader(hFile, &HiveBinHeader) == FAILURE) return FAILURE;
 
-        wprintf(L"ParseHiveBinHeader failed.\n");
-        return FAILURE;
-    }
     dwAbsoluteCurrentHiveBinOffset = FILE_HEADER_SIZE;
 
     // Parse root key of a hive bin
-    DWORD dwCellType = REG_NONE;
-    DWORD dwAbsoluteOffset = (FILE_HEADER_SIZE + HiveBinHeader.dwRelativeOffset + HIVE_BIN_HEADER_SIZE);
-    if (ParseCell(hFile, dwAbsoluteOffset) == FAILURE) {
-
-        wprintf(L"ParseCell failed.\n");
-        return FAILURE;
-    }
+    if (ParseCell(hFile, dwAbsoluteCurrentHiveBinOffset + FileHeader.dwRootCellOffset) == FAILURE) return FAILURE;
 
     return SUCCESS;
 }
@@ -78,14 +67,10 @@ BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock) {
 
     pReadedData = byReadData;
 
-    wprintf(L"File Header:\n");
-
     // Regf signeture
     for (int i = 0; i < 4; i++) szTempSigneture[i] = pReadedData[i];
     pBaseBlock->lpRegfSigneture = szTempSigneture;
     pReadedData += 4;
-
-    wprintf(L"    Signeture:                         %hs\n", pBaseBlock->lpRegfSigneture);
 
     // Primary sequence number
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
@@ -97,8 +82,6 @@ BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock) {
     pBaseBlock->dwSecondarySequenceNumber = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    SequenceNumber:                    {0x%X, 0x%X}\n", pBaseBlock->dwPrimarySequenceNumber, pBaseBlock->dwSecondarySequenceNumber);
-
     // Last written timestamp
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->ftLastWrittenTimeStamp.dwLowDateTime = *(DWORD*)byDwordArray;
@@ -106,12 +89,6 @@ BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock) {
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->ftLastWrittenTimeStamp.dwHighDateTime = *(DWORD*)byDwordArray;
     pReadedData += 4;
-
-    SYSTEMTIME stLastWrittenTimeStamp = { 0 };
-    FileTimeToSystemTime(&pBaseBlock->ftLastWrittenTimeStamp, &stLastWrittenTimeStamp);
-    wprintf(L"    Last written time:                 %04d/%02d/%02d %02d:%02d\n"
-        , stLastWrittenTimeStamp.wYear, stLastWrittenTimeStamp.wMonth, stLastWrittenTimeStamp.wDay
-        , stLastWrittenTimeStamp.wHour, stLastWrittenTimeStamp.wMinute);
 
     // Major version
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
@@ -123,50 +100,35 @@ BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock) {
     pBaseBlock->dwWriterMinorVersion = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    Maj.Min                            %d.%d\n", pBaseBlock->dwWriterMajorVersion, pBaseBlock->dwWriterMinorVersion);
-
     // File type
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->dwFileType = *(DWORD*)byDwordArray;
     pReadedData += 4;
-
-    wprintf(L"    File type:                         0x%X\n", pBaseBlock->dwFileType);
 
     // File format
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->dwFileFormat = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    File format:                       0x%X\n", pBaseBlock->dwFileFormat);
-
     // Root cell offset
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->dwRootCellOffset = *(DWORD*)byDwordArray;
     pReadedData += 4;
-
-    wprintf(L"    Root cell offset:                  0x%X\n", pBaseBlock->dwRootCellOffset);
 
     // Hive bins data size
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->dwHiveBinsDataSize = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    Hive bins data:                    0x%X\n", pBaseBlock->dwHiveBinsDataSize);
-
     // Clustering factor
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->dwClusteringFactor = *(DWORD*)byDwordArray;
     pReadedData += 4;
 
-    wprintf(L"    Clustering factor:                 0x%X\n", pBaseBlock->dwClusteringFactor);
-
     // File name
     CHAR szTempFileName[64];
     for (int i = 0; i < 64; i++) szTempFileName[i] = (CHAR)pReadedData[i];
     pReadedData += 64;
-
-    ByteToWchar(pBaseBlock->szFileName, szTempFileName, 64);
-    wprintf(L"    File name:                         %s\n", pBaseBlock->szFileName);
 
     // Resource manager guid
     ByteToGuid(pReadedData, &pBaseBlock->guidRmId);
@@ -174,7 +136,6 @@ BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock) {
     GuidToWchar(szRmGuidString, &pBaseBlock->guidRmId);
     pReadedData += 16;
 
-    wprintf(L"    RmId:                              %s\n", szRmGuidString);
 
     // Log file guid
     ByteToGuid(pReadedData, &pBaseBlock->guidLogId);
@@ -182,14 +143,10 @@ BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock) {
     GuidToWchar(szLogGuidString, &pBaseBlock->guidLogId);
     pReadedData += 16;
 
-    wprintf(L"    LogId:                             %s\n", szLogGuidString);
-
     // Guid flags
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->dwGuidFlags = *(DWORD*)byDwordArray;
     pReadedData += 4;
-
-    wprintf(L"    Guid flags:                        0x%X\n", pBaseBlock->dwGuidFlags);
 
     // Transaction manager guid
     ByteToGuid(pReadedData, &pBaseBlock->guidTmId);
@@ -197,14 +154,10 @@ BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock) {
     GuidToWchar(szTmGuidString, &pBaseBlock->guidTmId);
     pReadedData += 16;
 
-    wprintf(L"    TmId:                              %s\n", szTmGuidString);
-
     // Guid signeture
     for (int i = 0; i < 4; i++) szTempSigneture[i] = pReadedData[i];
     CharToWchar(pBaseBlock->szGuidSigneture, szTempSigneture, 5);
     pReadedData += 4;
-
-    wprintf(L"    Guid signeture:                    %s\n", pBaseBlock->szGuidSigneture);
 
     // Last reorganized time
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
@@ -213,12 +166,6 @@ BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock) {
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
     pBaseBlock->ftLastReorganizedTime.dwHighDateTime = *(DWORD*)byDwordArray;
     pReadedData += 4;
-
-    SYSTEMTIME stLastReorganizedTime = { 0 };
-    FileTimeToSystemTime(&pBaseBlock->ftLastReorganizedTime, &stLastReorganizedTime);
-    wprintf(L"    Last reorganized time:             %04d/%02d/%02d %02d:%02d\n"
-        , stLastReorganizedTime.wYear, stLastReorganizedTime.wMonth, stLastReorganizedTime.wDay
-        , stLastReorganizedTime.wHour, stLastReorganizedTime.wMinute);
 
     // Offline registry signeture
     pReadedData += 4;
