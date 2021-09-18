@@ -26,7 +26,7 @@ BOOL ParseFastLeaf(HANDLE hFile, PFAST_LEAF pFastLeaf, DWORD dwAbsoluteOffset) {
 
     if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
 
-        wprintf(L"ReadFile failed with %x\n", GetLastError());
+        wprintf(L"ReadFile failed with 0x%X in ParseFastLeaf().\n", GetLastError());
         return FAILURE;
     }
 
@@ -61,7 +61,7 @@ BOOL ParseFastLeaf(HANDLE hFile, PFAST_LEAF pFastLeaf, DWORD dwAbsoluteOffset) {
 
         if (ParseCell(hFile, dwAbsoluteCurrentHiveBinOffset + pElement[i].dwKeyNodeOffset) == FAILURE) {
 
-            wprintf(L"ParseCell failed.\n");
+            wprintf(L"ParseCell failed in ParseFastLeaf().\n");
             return FAILURE;
         }
     }
@@ -92,7 +92,7 @@ BOOL ParseKeyNode(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset) {
 
     if (ReadFile(hFile, pReadedData, pKeyNode->dwSize, &nReadedSize, NULL) == FAILURE) {
 
-        wprintf(L"ReadFile failed with %d", GetLastError());
+        wprintf(L"ReadFile failed with 0x%X in ParseKeyNode().", GetLastError());
         return FAILURE;
     }
 
@@ -239,13 +239,11 @@ BOOL ParseKeyNode(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset) {
     pReadedData += (pKeyNode->dwSize - (76 + 4));
     wprintf(L"\n");
 
-    DWORD dwCellSize = 0;
-
     if (pKeyNode->dwSubKeysListOffset != 0xFFFFFFFF) {
 
         if (ParseCell(hFile, dwAbsoluteCurrentHiveBinOffset + pKeyNode->dwSubKeysListOffset) == FAILURE) {
 
-            wprintf(L"ParseCell failed.\n");
+            wprintf(L"ParseCell failed in ParseKeyNode().\n");
             return FAILURE;
         }
     }
@@ -253,7 +251,7 @@ BOOL ParseKeyNode(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset) {
 
         if (ParseKeyValueList(hFile, dwAbsoluteCurrentHiveBinOffset + pKeyNode->dwKeyValuesListOffset) == FAILURE) {
 
-            wprintf(L"ParseCell failed.\n");
+            wprintf(L"ParseCell failed in ParseKeyNode().\n");
             return FAILURE;
         }
     }
@@ -261,7 +259,7 @@ BOOL ParseKeyNode(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset) {
 
         if (ParseCell(hFile, dwAbsoluteCurrentHiveBinOffset + pKeyNode->dwClassNameOffset) == FAILURE) {
 
-            wprintf(L"ParseCell failed.\n");
+            wprintf(L"ParseCell failed in ParseKeyNode().\n");
             return FAILURE;
         }
     }
@@ -286,7 +284,7 @@ BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
 
     if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
 
-        wprintf(L"ReadFile failed with %x\n", GetLastError());
+        wprintf(L"ReadFile failed with 0X%x in ParseKeyValue().\n", GetLastError());
         return FAILURE;
     }
 
@@ -340,7 +338,7 @@ BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
 
     SetFilePointer(hFile, dwAbsoluteDataOffset, NULL, FILE_BEGIN);
 
-    if (pValueKey->dwDataType == REG_DWORD) {
+    if (pValueKey->dwDataType == REG_DWORD || pValueKey->dwDataSize == 0x80000001) {
 
         wprintf(L"    Data:                              0x%X\n", pValueKey->dwDataOffset);
         return SUCCESS;
@@ -354,7 +352,7 @@ BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
 
     if (ReadFile(hFile, &byDataSize, dwDataSizeSize, &dwDataSizeReaded, NULL) == FAILURE) {
 
-        wprintf(L"ReadFile failed with %x\n", GetLastError());
+        wprintf(L"ReadFile failed with 0x%X in ParseKeyValue().\n", GetLastError());
         return FAILURE;
     }
 
@@ -373,7 +371,7 @@ BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
 
     if (ReadFile(hFile, pData, dwDataSize, &dwReadedDataSize, NULL) == FAILURE) {
 
-        wprintf(L"ReadFile failed with %x\n", GetLastError());
+        wprintf(L"ReadFile failed with 0x%X in ParseKeyValue().\n", GetLastError());
         return FAILURE;
     }
 
@@ -407,7 +405,7 @@ BOOL ParseKeySecurity(HANDLE hFile, PKEY_SECURITY pSecurityKey, DWORD dwAbsolute
 
     if (ReadFile(hFile, pReadedData, nBaseBlockSize, &nReadedSize, NULL) == FAILURE) {
 
-        wprintf(L"ReadFile failed with %d", GetLastError());
+        wprintf(L"ReadFile failed with 0x%X in ParseKeyValue().", GetLastError());
         return FAILURE;
     }
 
