@@ -13,32 +13,23 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Source files\LowLevel">
-      <UniqueIdentifier>{1a25597c-8104-4dba-8073-0c22b8e6529c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\KernelMode">
-      <UniqueIdentifier>{fb32fd2f-edba-4b01-b00f-5d4e925cd077}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\UserMode">
-      <UniqueIdentifier>{2dec63f4-ae8b-41c3-b06f-3410b0ce1b52}</UniqueIdentifier>
+    <Filter Include="Source files\Perser">
+      <UniqueIdentifier>{ed09755a-a481-4262-88a7-5bec8f0a5793}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CellDataParser.c">
-      <Filter>Source files\LowLevel</Filter>
+      <Filter>Source files\Perser</Filter>
     </ClCompile>
     <ClCompile Include="Converter.c">
-      <Filter>Source files\LowLevel</Filter>
+      <Filter>Source files\Perser</Filter>
     </ClCompile>
-    <ClCompile Include="MainLoader.c">
-      <Filter>Source files\LowLevel</Filter>
+    <ClCompile Include="MainParser.c">
+      <Filter>Source files\Perser</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="RegistryLoader.h">
-      <Filter>Header files</Filter>
-    </ClInclude>
-    <ClInclude Include="HiveData.h">
+    <ClInclude Include="RegistryParser.h">
       <Filter>Header files</Filter>
     </ClInclude>
   </ItemGroup>

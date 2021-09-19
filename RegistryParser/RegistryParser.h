@@ -5,7 +5,6 @@
 
 #include <stdio.h>
 #include <Windows.h>
-#include "HiveData.h"
 #include <Shlwapi.h>
 #pragma comment (lib, "Shlwapi.lib")
 #pragma warning (disable: 4996)
@@ -32,6 +31,9 @@
 
 #define OFFSET_TYPE_IS_CELL       0x001
 #define OFFSET_TYPE_IS_VALUE_LIST 0x002
+
+#define HBIN_HEADER_BIN_SIZE_LEN         4
+#define HBIN_HEADER_BIN_SIGNETURE_LEN    2
 
 // global variables
 
@@ -187,6 +189,8 @@ typedef struct _ELEMENT {
 
 // Functions
 
+BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock);
+BOOL ParseHiveBinHeader(HANDLE hFile, PHIVE_BIN_HEADER pHBin);
 BOOL ParseCell(HANDLE hFile, DWORD dwAbsoluteCellOffset);
 BOOL ParseKeyValueList(HANDLE hFile, DWORD dwAbsoluteOffset);
 

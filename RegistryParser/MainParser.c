@@ -1,22 +1,9 @@
 // Copyright (c) 2021 onein528
 // Licensed under the MIT License.
 
-#include "RegistryLoader.h"
+#include "RegistryParser.h"
 
-DWORD dwAbsoluteOffsetCurrentPointer = 0;
 DWORD dwAbsoluteCurrentHiveBinOffset = 0;
-
-INDEX_LEAF g_IndexLeaf = { 0 };
-FAST_LEAF g_FastLeaf = { 0 };
-HASH_LEAF g_HashLeaf = { 0 };
-INDEX_ROOT g_IndexRoot = { 0 };
-KEY_NODE g_KeyNode = { 0 };
-KEY_VALUE g_ValueKey = { 0 };
-KEY_SECURITY g_SecurityKey = { 0 };
-BIG_DATA g_BigData = { 0 };
-
-BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock);
-BOOL ParseHiveBinHeader(HANDLE hFile, PHIVE_BIN_HEADER pHBin);
 
 
 int wmain(void) {
@@ -25,8 +12,6 @@ int wmain(void) {
 
     FILE_HEADER FileHeader = { 0 };
     HIVE_BIN_HEADER HiveBinHeader = { 0 };
-
-    WCHAR lpKeyName[256] = L"NewStoreRoot\\BCD00000001\\Objects\\";
 
     if ((hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD", GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)) == INVALID_HANDLE_VALUE) {
 

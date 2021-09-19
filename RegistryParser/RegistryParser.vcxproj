@@ -22,8 +22,9 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{a3ded93d-5bf2-4d09-996b-7f40e92824c6}</ProjectGuid>
-    <RootNamespace>RegistryLoader</RootNamespace>
+    <RootNamespace>RegistryParser</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>RegistryParser</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -140,12 +141,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Converter.c" />
-    <ClCompile Include="MainLoader.c" />
+    <ClCompile Include="MainParser.c" />
     <ClCompile Include="CellDataParser.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="HiveData.h" />
-    <ClInclude Include="RegistryLoader.h" />
+    <ClInclude Include="RegistryParser.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
