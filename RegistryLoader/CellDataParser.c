@@ -378,10 +378,10 @@ BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
     // Data
     wprintf(L"    Data:                              ");
 
-    for (int i = 0; i < (dwDataSize - 4); i++) {
+    for (int i = 0; i < pValueKey->dwDataSize; i++) {
 
         wprintf(L"%X", pData[i]);
-        if (i != ((dwDataSize - 4) - 1)) wprintf(L",");
+        if (i != (pValueKey->dwDataSize - 1)) wprintf(L",");
         else wprintf(L"\n");
     }
 
