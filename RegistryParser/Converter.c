@@ -33,37 +33,6 @@ BOOL ByteToGuid(PBYTE pData, GUID* guidResultGuid) {
 }
 
 
-BOOL CharToWchar(WCHAR* szWideString, CHAR* szSingleString, DWORD dwSizeToCopy) {
-
-    if (szWideString == NULL || szSingleString == NULL || dwSizeToCopy == 0) return FAILURE;
-
-    for (int i = 0; i < dwSizeToCopy; i++) {
-
-        szWideString[i] = (WCHAR)szSingleString[i];
-    }
-
-    return SUCCESS;
-}
-
-
-BOOL ByteToWchar(WCHAR* szWideString, BYTE* pData, DWORD dwSizeToCopy) {
-
-    if (szWideString == NULL || pData == NULL || dwSizeToCopy == 0) return FAILURE;
-
-    for (int i = 0, j = 0; i < dwSizeToCopy * 2; i++, j++) {
-
-        if (i % 2 == 1) {
-            j--;
-            continue;
-        }
-
-        szWideString[j] = pData[i];
-    }
-
-    return SUCCESS;
-}
-
-
 BOOL GuidToWchar(WCHAR* szWideString, GUID* Guid) {
 
     if (szWideString == NULL || Guid == NULL) return FAILURE;
@@ -73,4 +42,18 @@ BOOL GuidToWchar(WCHAR* szWideString, GUID* Guid) {
         , Guid->Data4[3], Guid->Data4[4], Guid->Data4[5], Guid->Data4[6], Guid->Data4[7]);
 
     return SUCCESS;
+}
+
+
+DWORD BytesArrayToDword(PBYTE pData) {
+
+    DWORD dwData = 0;
+    BYTE byDwordArray[4] = { 0 };
+
+    if (pData == NULL) return FAILURE;
+
+    for (int i = 0; i < 4; i++)byDwordArray[i] = pData[i];
+    dwData = *(DWORD*)byDwordArray;
+
+    return dwData;
 }

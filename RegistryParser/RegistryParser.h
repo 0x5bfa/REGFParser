@@ -102,6 +102,7 @@ typedef struct _HASH_LEAF {
 
     DWORD dwSize;
     WCHAR szHashLeafSigneture[3];
+    DWORD nElements;
 
 }HASH_LEAF, *PHASH_LEAF;
 
@@ -177,13 +178,21 @@ typedef struct _BIG_DATA {
 
 }BIG_DATA, *PBIG_DATA;
 
-// elements list
-typedef struct _ELEMENT {
+// fast leaf elements list
+typedef struct _FAST_ELEMENT {
 
     DWORD dwKeyNodeOffset;
     CHAR szNameHint[5];
 
-}ELEMENT, * PELEMENT;
+}FAST_ELEMENT, *PFAST_ELEMENT;
+
+// hash leaf elements list
+typedef struct _HASH_ELEMENT {
+
+    DWORD dwKeyNodeOffset;
+    DWORD dwNameHash;
+
+}HASH_ELEMENT, *PHASH_ELEMENT;
 
 
 
@@ -194,12 +203,15 @@ BOOL ParseHiveBinHeader(HANDLE hFile, PHIVE_BIN_HEADER pHBin);
 BOOL ParseCell(HANDLE hFile, DWORD dwAbsoluteCellOffset);
 BOOL ParseKeyValueList(HANDLE hFile, DWORD dwAbsoluteOffset);
 
-BOOL ParseKeyNode(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset);
-BOOL ParseKeySecurity(HANDLE hFile, PKEY_SECURITY pSecurityKey, DWORD dwAbsoluteOffset);
+BOOL ParseIndexLeaf(HANDLE hFile, PINDEX_LEAF pIndexLeaf, DWORD dwAbsoluteOffset);
 BOOL ParseFastLeaf(HANDLE hFile, PFAST_LEAF pFastLeaf, DWORD dwAbsoluteOffset);
+BOOL ParseHashLeaf(HANDLE hFile, PHASH_LEAF pHashLeaf, DWORD dwAbsoluteOffset);
+BOOL ParseIndexRoot(HANDLE hFile, PINDEX_ROOT pIndexRoot, DWORD dwAbsoluteOffset);
+BOOL ParseKeyNode(HANDLE hFile, PKEY_NODE pKeyNode, DWORD dwAbsoluteOffset);
 BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset);
+BOOL ParseKeySecurity(HANDLE hFile, PKEY_SECURITY pSecurityKey, DWORD dwAbsoluteOffset);
+BOOL ParseBigData(HANDLE hFile, PBIG_DATA pBigData, DWORD dwAbsoluteOffset);
 
 BOOL ByteToGuid(PBYTE pData, GUID* guidResultGuid);
-BOOL CharToWchar(WCHAR* szWideString, CHAR* szSingleString, DWORD dwSizeToCopy);
-BOOL ByteToWchar(WCHAR* szWideString, BYTE* pData, DWORD dwSizeToCopy);
 BOOL GuidToWchar(WCHAR* szWideString, GUID* Guid);
+DWORD BytesArrayToDword(PBYTE pData);

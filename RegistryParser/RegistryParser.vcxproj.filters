@@ -13,24 +13,26 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Source files\Perser">
-      <UniqueIdentifier>{ed09755a-a481-4262-88a7-5bec8f0a5793}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CellDataParser.c">
-      <Filter>Source files\Perser</Filter>
+      <Filter>Source files</Filter>
     </ClCompile>
     <ClCompile Include="Converter.c">
-      <Filter>Source files\Perser</Filter>
+      <Filter>Source files</Filter>
     </ClCompile>
     <ClCompile Include="MainParser.c">
-      <Filter>Source files\Perser</Filter>
+      <Filter>Source files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RegistryParser.h">
       <Filter>Header files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\Desktop\registry.dat">
+      <Filter>Source files</Filter>
+    </None>
   </ItemGroup>
 </Project>

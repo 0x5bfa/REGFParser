@@ -4,6 +4,8 @@
 #include "RegistryParser.h"
 #include <sddl.h>
 
+LPWSTR GetStringDataType(DWORD dwDataType);
+
 
 BOOL ParseIndexLeaf(HANDLE hFile, PINDEX_LEAF pIndexLeaf, DWORD dwAbsoluteOffset) {
 
@@ -37,8 +39,8 @@ BOOL ParseFastLeaf(HANDLE hFile, PFAST_LEAF pFastLeaf, DWORD dwAbsoluteOffset) {
 
     wprintf(L"    Number of elements:                0x%X\n", pFastLeaf->nElements);
 
-    PELEMENT pElement = NULL;
-    if ((pElement = (PELEMENT)calloc((pFastLeaf->nElements * 2), sizeof(ELEMENT))) == NULL) return FAILURE;
+    PFAST_ELEMENT pElement = NULL;
+    if ((pElement = (PFAST_ELEMENT)calloc((pFastLeaf->nElements * 2), sizeof(FAST_ELEMENT))) == NULL) return FAILURE;
 
     for (int j = 0; j < pFastLeaf->nElements; j++) {
 
@@ -72,6 +74,60 @@ BOOL ParseFastLeaf(HANDLE hFile, PFAST_LEAF pFastLeaf, DWORD dwAbsoluteOffset) {
 
 BOOL ParseHashLeaf(HANDLE hFile, PHASH_LEAF pHashLeaf, DWORD dwAbsoluteOffset) {
 
+    SetFilePointer(hFile, dwAbsoluteOffset, NULL, FILE_BEGIN);
+
+    PBYTE pReadedData = NULL;
+    DWORD nReadedSize = 0;
+
+    // Allocate memory for reading
+    if ((pReadedData = (BYTE*)calloc(pHashLeaf->dwSize, sizeof(BYTE))) == NULL) return FAILURE;
+
+    if (ReadFile(hFile, pReadedData, pHashLeaf->dwSize, &nReadedSize, NULL) == FAILURE) {
+
+        wprintf(L"ReadFile failed with 0x%X in ParseKeyNode().", GetLastError());
+        return FAILURE;
+    }
+
+    BYTE byDwordArray[4] = { 0 };
+
+    // Number of elements
+    for (int i = 0; i < 2; i++) byDwordArray[i] = pReadedData[i];
+    pHashLeaf->nElements = *(DWORD*)byDwordArray;
+    pReadedData += 2;
+
+    wprintf(L"    Number of elements:                0x%X\n", pHashLeaf->nElements);
+
+    PHASH_ELEMENT pElement = NULL;
+    if ((pElement = (PHASH_ELEMENT)calloc((pHashLeaf->nElements * 2), sizeof(HASH_ELEMENT))) == NULL) return FAILURE;
+
+    for (int j = 0; j < pHashLeaf->nElements; j++) {
+
+        // Read 8 bytes
+
+        // Offset
+        for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+        pElement[j].dwKeyNodeOffset = *(DWORD*)byDwordArray;
+        pReadedData += 4;
+
+        wprintf(L"    #%02d Key node offset:               0x%X\n", j, pElement[j].dwKeyNodeOffset);
+
+        // Hash value
+        for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
+        pElement[j].dwNameHash = *(DWORD*)byDwordArray; // temp
+        wprintf(L"        Hash value:                    0x%X\n", pElement[j].dwNameHash);
+        pReadedData += 4;
+    }
+
+    for (int i = 0; i < pHashLeaf->nElements; i++) {
+
+        if (ParseCell(hFile, dwAbsoluteCurrentHiveBinOffset + pElement[i].dwKeyNodeOffset) == FAILURE) {
+
+            wprintf(L"ParseCell failed in ParseFastLeaf().\n");
+            return FAILURE;
+        }
+    }
+
+    return SUCCESS;
 }
 
 
@@ -296,22 +352,19 @@ BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
     wprintf(L"    Value name size:                   0x%X\n", pValueKey->dwValueNameSize);
 
     // Data size
-    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
-    pValueKey->dwDataSize = *(DWORD*)byDwordArray;
+    pValueKey->dwDataSize = BytesArrayToDword(pReadedData);
     pReadedData += 4;
 
     wprintf(L"    Data size:                         0x%X\n", pValueKey->dwDataSize);
 
     // Data offset
-    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
-    pValueKey->dwDataOffset = *(DWORD*)byDwordArray;
+    pValueKey->dwDataOffset = BytesArrayToDword(pReadedData);
     pReadedData += 4;
 
     wprintf(L"    Data offset:                       0x%X\n", pValueKey->dwDataOffset);
 
     // Data type
-    for (int i = 0; i < 4; i++) byDwordArray[i] = pReadedData[i];
-    pValueKey->dwDataType = *(DWORD*)byDwordArray;
+    pValueKey->dwDataType = BytesArrayToDword(pReadedData);
     pReadedData += 4;
 
     wprintf(L"    Data type:                         0x%X\n", pValueKey->dwDataType);
@@ -328,8 +381,12 @@ BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
 
     // Key name
     wprintf(L"    Key name:                          ");
-    for (int i = 0; i < pValueKey->dwValueNameSize; i++) wprintf(L"%c", (WCHAR)pReadedData[i]);
-    wprintf(L"\n");
+    if(pValueKey->dwValueNameSize == 0) wprintf(L"(Default)\n");
+    else {
+
+        for (int i = 0; i < pValueKey->dwValueNameSize; i++) wprintf(L"%c", (WCHAR)pReadedData[i]);
+        wprintf(L"\n");
+    }
 
     pReadedData += (pValueKey->dwSize - (20 + 6));
 
@@ -338,7 +395,7 @@ BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
 
     SetFilePointer(hFile, dwAbsoluteDataOffset, NULL, FILE_BEGIN);
 
-    if (pValueKey->dwDataType == REG_DWORD || pValueKey->dwDataSize == 0x80000001) {
+    if (pValueKey->dwDataSize >= 0x80000000) {
 
         wprintf(L"    Data:                              0x%X\n", pValueKey->dwDataOffset);
         return SUCCESS;
@@ -358,8 +415,7 @@ BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
 
     pDataSize = byDataSize;
 
-    for (int i = 0; i < 4; i++) byDwordArray[i] = pDataSize[i];
-    DWORD dwDataSize = abs(*(DWORD*)byDwordArray);
+    DWORD dwDataSize = abs(BytesArrayToDword(pDataSize));
     pDataSize += 4;
 
     // Data size
@@ -378,11 +434,15 @@ BOOL ParseKeyValue(HANDLE hFile, PKEY_VALUE pValueKey, DWORD dwAbsoluteOffset) {
     // Data
     wprintf(L"    Data:                              ");
 
-    for (int i = 0; i < pValueKey->dwDataSize; i++) {
+    if (pValueKey->dwDataSize == 0) wprintf(L"(No value set)\n");
+    else {
 
-        wprintf(L"%X", pData[i]);
-        if (i != (pValueKey->dwDataSize - 1)) wprintf(L",");
-        else wprintf(L"\n");
+        for (int i = 0; i < pValueKey->dwDataSize; i++) {
+
+            wprintf(L"%X", pData[i]);
+            if (i != (pValueKey->dwDataSize - 1)) wprintf(L",");
+            else wprintf(L"\n");
+        }
     }
 
     return SUCCESS;
@@ -456,3 +516,51 @@ BOOL ParseKeySecurity(HANDLE hFile, PKEY_SECURITY pSecurityKey, DWORD dwAbsolute
 BOOL ParseBigData(HANDLE hFile, PBIG_DATA pBigData, DWORD dwAbsoluteOffset) {
 
 }
+
+
+LPWSTR GetStringDataType(DWORD dwDataType) {
+
+    WCHAR szDataType[32] = L"";
+
+    switch (dwDataType) {
+
+    case REG_SZ:
+        wcscpy(szDataType, L"REG_SZ");
+
+    case REG_EXPAND_SZ:
+        wcscpy(szDataType, L"REG_EXPAND_SZ");
+
+    case REG_BINARY:
+        wcscpy(szDataType, L"REG_BINARY");
+
+    case REG_DWORD:
+        wcscpy(szDataType, L"REG_DWORD");
+
+    case REG_DWORD_BIG_ENDIAN:
+        wcscpy(szDataType, L"REG_DWORD_BIG_ENDIAN");
+
+    case REG_LINK:
+        wcscpy(szDataType, L"REG_LINK");
+
+    case REG_MULTI_SZ:
+        wcscpy(szDataType, L"REG_MULTI_SZ");
+
+    case REG_RESOURCE_LIST:
+        wcscpy(szDataType, L"REG_RESOURCE_LIST");
+
+    case REG_FULL_RESOURCE_DESCRIPTOR:
+        wcscpy(szDataType, L"REG_FULL_RESOURCE_DESCRIPTOR");
+
+    case REG_RESOURCE_REQUIREMENTS_LIST:
+        wcscpy(szDataType, L"REG_RESOURCE_REQUIREMENTS_LIST");
+
+    case REG_QWORD:
+        wcscpy(szDataType, L"REG_QWORD");
+
+    default: return NULL;
+    }
+
+    return *szDataType;
+}
+
+

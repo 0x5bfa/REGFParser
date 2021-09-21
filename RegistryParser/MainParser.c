@@ -6,14 +6,20 @@
 DWORD dwAbsoluteCurrentHiveBinOffset = 0;
 
 
-int wmain(void) {
+int wmain(int argc, LPWSTR argv[]) {
+
+    if (argc == 1 || CHECK_RETURN(wcscmp(argv[1], L"/?"))) {
+
+        wprintf(L"\nRegistryParser [filename]\n    filename    Specify registry hive file.\n\n");
+        return FAILURE;
+    }
 
     HANDLE hFile = NULL;
 
     FILE_HEADER FileHeader = { 0 };
     HIVE_BIN_HEADER HiveBinHeader = { 0 };
 
-    if ((hFile = CreateFileW(L"C:\\Users\\T31068068\\Desktop\\BCD", GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)) == INVALID_HANDLE_VALUE) {
+    if ((hFile = CreateFileW(argv[1], GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)) == INVALID_HANDLE_VALUE) {
 
         wprintf(L"ReadFile failed with 0x%X.\n", GetLastError());
         return FAILURE;
@@ -141,7 +147,6 @@ BOOL ParseFileHeader(HANDLE hFile, PFILE_HEADER pBaseBlock) {
 
     // Guid signeture
     for (int i = 0; i < 4; i++) szTempSigneture[i] = pReadedData[i];
-    CharToWchar(pBaseBlock->szGuidSigneture, szTempSigneture, 5);
     pReadedData += 4;
 
     // Last reorganized time
@@ -306,6 +311,10 @@ BOOL ParseCell(HANDLE hFile, DWORD dwAbsoluteCellOffset) {
     }
     else if (CHECK_RETURN(StrCmpA(szCellSigneture, "lh"))) {
 
+        PHASH_LEAF pHashLeaf = NULL;
+        if ((pHashLeaf = (PHASH_LEAF)calloc(1, sizeof(HASH_LEAF))) == NULL) return FAILURE;
+        pHashLeaf->dwSize = dwSize;
+        if (ParseHashLeaf(hFile, pHashLeaf, dwAbsoluteCellOffset) == FAILURE) return FAILURE;
     }
     else if (CHECK_RETURN(StrCmpA(szCellSigneture, "ri"))) {
 
@@ -361,7 +370,7 @@ BOOL ParseKeyValueList(HANDLE hFile, DWORD dwAbsoluteOffset) {
 
     BYTE byDwordArray[4] = { 0 };
 
-    wprintf(L"\nValueList:(Abs:0x%04X)[%02X][%02X][%02X][%02X]\n", dwAbsoluteOffset, pReadData[0], pReadData[1], pReadData[2], pReadData[3]);
+    wprintf(L"\nValueList:(Abs:0x%04X)\n", dwAbsoluteOffset);
 
     // offset list size
     for (int i = 0; i < 4; i++) byDwordArray[i] = pReadData[i];
@@ -392,7 +401,7 @@ BOOL ParseKeyValueList(HANDLE hFile, DWORD dwAbsoluteOffset) {
         for (int i = 0; i < 4; i++) byDwordArray[i] = pReadData[i];
         pOffsets[j] = abs(*(DWORD*)byDwordArray);
         pReadData += 4;
-        wprintf(L"    Offset #%d:                         0x%X\n", j, pOffsets[j]);
+        wprintf(L"    Offset #%02d:                        0x%X\n", j, pOffsets[j]);
     }
 
     // Move
